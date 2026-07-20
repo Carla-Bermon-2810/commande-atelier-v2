@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 interface PageProps {
@@ -48,15 +49,17 @@ export default async function CategoriePage({ params }: PageProps) {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {types.map((type) => (
-            <div
-              key={type}
-              className="cursor-pointer rounded-2xl border bg-white p-8 shadow-md transition hover:scale-105 hover:shadow-xl"
+            <Link
+            key={type}
+            href={`/categorie/${slug}/${encodeURIComponent(type)}`}
             >
-              <h2 className="text-center text-xl font-semibold">
-                {type}
-              </h2>
-            </div>
-          ))}
+          <div className="cursor-pointer rounded-2xl border bg-white p-8 shadow-md transition hover:scale-105 hover:shadow-xl">
+          <h2 className="text-center text-xl font-semibold">
+            {type}
+        </h2>
+      </div>
+      </Link>
+    ))}
         </div>
       </div>
     </main>
