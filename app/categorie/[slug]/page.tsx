@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getFamille } from "@/lib/catalogue";
+import Navbar from "@/components/Navbar";
 
 interface PageProps {
   params: Promise<{
@@ -10,7 +12,7 @@ interface PageProps {
 export default async function CategoriePage({ params }: PageProps) {
   const { slug } = await params;
 
-  // Recherche de la catégorie grâce au slug
+  // Recherche de la catégorie
   const { data: categorie } = await supabase
     .from("categories")
     .select("nom")
@@ -21,45 +23,46 @@ export default async function CategoriePage({ params }: PageProps) {
     return <h1>Catégorie introuvable</h1>;
   }
 
-  // Récupération des types
-  const { data, error } = await supabase
-    .from("catalogue")
-    .select("type")
-    .eq("categorie", categorie.nom.toUpperCase());
-
-  if (error) {
-    console.error(error);
-  }
-
-  // Suppression des doublons + suppression des espaces + tri
-  const types = [
-    ...new Set(
-      data
-        ?.map((item) => item.type?.trim().toUpperCase())
-        .filter(Boolean)
-    ),
-  ].sort();
+  // Récupération des familles
+  const famille = await getFamille(categorie.nom);
 
   return (
     <main className="min-h-screen bg-gray-100 p-8">
       <div className="mx-auto max-w-7xl">
+        <Navbar />
         <h1 className="mb-10 text-4xl font-bold">
           {categorie.nom}
         </h1>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {types.map((type) => (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {famille.map((famille) => (
             <Link
-            key={type}
-            href={`/categorie/${slug}/${encodeURIComponent(type)}`}
+              key={famille.id}
+              href={`/categorie/${slug}/${encodeURIComponent(famille.famille)}`}
             >
-          <div className="cursor-pointer rounded-2xl border bg-white p-8 shadow-md transition hover:scale-105 hover:shadow-xl">
-          <h2 className="text-center text-xl font-semibold">
-            {type}
-        </h2>
-      </div>
-      </Link>
-    ))}
+              <div className="overflow-hidden rounded-2xl border bg-white shadow-md transition hover:scale-105 hover:shadow-xl">
+
+                <div className="flex h-48 items-center justify-center bg-gray-200">
+                  {famille.photo ? (
+                    <img
+                      src={famille.photo}
+                      alt={famille.famille}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-5xl">📦</span>
+                  )}
+                </div>
+
+                <div className="p-6">
+                  <h2 className="text-center text-xl font-semibold">
+                    {famille.famille}
+                  </h2>
+                </div>
+
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </main>
