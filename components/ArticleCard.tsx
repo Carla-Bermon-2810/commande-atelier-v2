@@ -37,17 +37,16 @@ export default function ArticleCard({ article }: Props) {
         </p>
 
         <button
-          onClick={() =>
-            addToCart({
-              article: article.article,
-              famille: article.famille,
-              photo: article.photo ?? undefined,
-              quantite: 1,
-            })
-          }
+        
+          onClick={() => {
+            router.push(
+              `/produit/${encodeURIComponent(article.produit || article.article)}`
+            );
+          }}
+
           className="mt-6 w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
         >
-          Ajouter au panier
+          Voir le produit
         </button>
       </div>
     </div>

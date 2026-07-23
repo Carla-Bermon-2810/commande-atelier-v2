@@ -12,7 +12,6 @@ interface PageProps {
 export default async function FamillePage({ params }: PageProps) {
   const { slug, famille } = await params;
 
-  // Recherche de la catégorie
   const { data: categorie } = await supabase
     .from("categories")
     .select("nom")
@@ -25,7 +24,6 @@ export default async function FamillePage({ params }: PageProps) {
 
   const familleNom = decodeURIComponent(famille);
 
-  // Récupération des articles
   const { data: articles, error } = await supabase
     .from("catalogue")
     .select("*")

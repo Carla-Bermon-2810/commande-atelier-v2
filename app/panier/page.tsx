@@ -40,8 +40,13 @@ export default function PanierPage() {
         }),
       });
   
+      const result = await response.json();
+  
+      console.log("Réponse API :", result);
+  
       if (!response.ok) {
-        throw new Error("Erreur lors de l'envoi");
+        alert(result.error || result.message || "Erreur inconnue");
+        return;
       }
   
       alert("✅ Commande envoyée avec succès !");
@@ -49,11 +54,12 @@ export default function PanierPage() {
       clearCart();
       setCommentaire("");
       setDemandeur("");
+  
     } catch (error) {
       console.error(error);
-      alert("❌ Impossible d'envoyer la commande.");
+      alert("❌ Erreur de connexion au serveur.");
     }
-  }
+  } //<--fermeture de envoyer commande()  
 
   return (
     <main className="min-h-screen bg-gray-100 p-8">
