@@ -42,7 +42,21 @@ export async function getArticles(
     .eq("categorie", categorie.toUpperCase())
     .eq("famille", famille.toUpperCase());
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return data;
-}
+    const articles = (data ?? []).map((article) => {
+      if (article.photo) {
+        const { data: photo } = supabase.storage
+          .from("photos")
+          .getPublicUrl(article.photo);
+    
+        return {
+          ...article,
+          photo: photo.publicUrl,
+        };
+      }
+    
+      return article;
+    });
+    
+    return articles;

@@ -37,19 +37,39 @@ export default async function FamillePage({ params }: PageProps) {
     .eq("famille", familleNom)
     .order("produit");
 
-    if (error) {
-      return (
-        <AppLayout>
-          <pre className="p-6 text-red-600 whitespace-pre-wrap">
-            {JSON.stringify(error, null, 2)}
-          </pre>
-        </AppLayout>
-      );
-    }
+  if (error) {
+    return (
+      <AppLayout>
+        <pre className="whitespace-pre-wrap p-6 text-red-600">
+          {JSON.stringify(error, null, 2)}
+        </pre>
+      </AppLayout>
+    );
+  }
 
-  // Suppression des doublons
+  // Conversion des chemins Storage en URL publiques
   const produits = [
-    ...new Map((data ?? []).map((p) => [p.produit, p])).values(),
+    ...new Map(
+      (data ?? []).map((p) => {
+        let photo: string | null = null;
+
+        if (p.photo) {
+          const { data: image } = supabase.storage
+            .from("photos")
+            .getPublicUrl(p.photo);
+
+          photo = image.publicUrl;
+        }
+
+        return [
+          p.produit,
+          {
+            ...p,
+            photo,
+          },
+        ];
+      })
+    ).values(),
   ];
 
   return (
@@ -61,7 +81,6 @@ export default async function FamillePage({ params }: PageProps) {
         <div className="mb-10 rounded-3xl border bg-white p-8 shadow-sm">
 
           <div className="mb-4">
-
             <Link
               href={`/categorie/${slug}`}
               className="inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-blue-600"
@@ -69,7 +88,6 @@ export default async function FamillePage({ params }: PageProps) {
               <ArrowLeft size={16} />
               Retour à {categorie.nom}
             </Link>
-
           </div>
 
           <h1 className="text-4xl font-bold text-slate-900">
@@ -81,24 +99,20 @@ export default async function FamillePage({ params }: PageProps) {
           </p>
 
           <div className="mt-6 flex items-center gap-6 text-sm text-slate-500">
-
             <span>
               <strong className="text-slate-900">
                 {produits.length}
               </strong>{" "}
               produit{produits.length > 1 ? "s" : ""}
             </span>
-
           </div>
 
         </div>
 
-        {/* Barre de recherche (visuelle pour le moment) */}
+        {/* Recherche */}
 
         <div className="mb-10">
-
           <div className="flex items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-sm">
-
             <Search
               className="text-slate-400"
               size={20}
@@ -109,24 +123,18 @@ export default async function FamillePage({ params }: PageProps) {
               placeholder="Rechercher un produit..."
               className="w-full bg-transparent outline-none"
             />
-
           </div>
-
         </div>
 
         {/* Produits */}
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
           {produits.map((produit) => (
-
             <ProductCard
               key={produit.produit}
               produit={produit}
             />
-
           ))}
-
         </div>
 
       </div>

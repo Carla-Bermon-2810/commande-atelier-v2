@@ -16,6 +16,8 @@ export default function ArticleCard({ article }: Props) {
   const { addToCart } = useCart();
   const router = useRouter();
 
+  console.log(article.photo);
+
   return (
     <div className="overflow-hidden rounded-2xl border bg-white shadow-md transition hover:scale-105 hover:shadow-xl">
       <div className="flex h-56 items-center justify-center bg-gray-100">
@@ -23,6 +25,10 @@ export default function ArticleCard({ article }: Props) {
           <img
             src={article.photo}
             alt={article.article}
+            onError={(e) => {
+              console.log("Photo :", article.photo);
+              console.log("Erreur image");
+            }}
             className="h-full w-full object-contain p-4"
           />
         ) : (
