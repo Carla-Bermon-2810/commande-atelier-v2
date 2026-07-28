@@ -1,10 +1,12 @@
 "use client";
 
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/cart-context";
+import { useRouter } from "next/navigation";
 
 interface Props {
   article: {
     article: string;
+    produit?: string;
     famille: string;
     photo?: string | null;
   };
@@ -12,6 +14,7 @@ interface Props {
 
 export default function ArticleCard({ article }: Props) {
   const { addToCart } = useCart();
+  const router = useRouter();
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-white shadow-md transition hover:scale-105 hover:shadow-xl">
@@ -37,13 +40,13 @@ export default function ArticleCard({ article }: Props) {
         </p>
 
         <button
-        
-          onClick={() => {
+          onClick={() =>
             router.push(
-              `/produit/${encodeURIComponent(article.produit || article.article)}`
-            );
-          }}
-
+              `/produit/${encodeURIComponent(
+                article.produit || article.article
+              )}`
+            )
+          }
           className="mt-6 w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
         >
           Voir le produit

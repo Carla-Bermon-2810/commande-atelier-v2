@@ -1,55 +1,58 @@
-import Header from "@/components/Header";
-import SearchBar from "@/components/SearchBar";
-import CategoryCard from "@/components/CategoryCard";
+import AppLayout from "@/components/layout/AppLayout";
+import Hero from "@/components/layout/Hero";
+import CategoryCard from "@/components/catalogue/CategoryCard";
 import { supabase } from "@/lib/supabase";
 
-const icons: Record<string, string> = {
-  package: "📦",
-  scissors: "✂️",
-  flame: "🔥",
-  box: "📋",
-};
+import {
+  Disc3,
+  Scissors,
+  Flame,
+  Package,
+  Wrench,
+  ShieldCheck,
+} from "lucide-react";
 
 export default async function Home() {
-  const { data: categories, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("ordre");
+  const { data: categories } = await supabase
+  .from("categories")
+  .select("*")
+  .order("ordre");
 
-  if (error) {
-    console.error(error);
-  }
+  const { data: catalogue } = await supabase
+  .from("catalogue")
+  .select("categorie");
+
+  const articleCount: Record<string, number> = {};
+
+catalogue?.forEach((article) => {
+  const categorie = article.categorie?.trim().toLowerCase();
+
+  if (!categorie) return;
+
+  articleCount[categorie] = (articleCount[categorie] || 0) + 1;
+});
 
   return (
-    <main className="min-h-screen bg-gray-100 p-8">
-      <div className="mx-auto max-w-7xl">
+    <AppLayout>
+      <Hero />
 
-        <Header />
-
-        <div className="mt-10 flex justify-center">
-          <SearchBar />
-        </div>
-
-        <div
-          className={`mt-14 grid gap-8 ${
-            categories && categories.length <= 4
-              ? "grid-cols-1 sm:grid-cols-2"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-          }`}
-        >
-
-          {categories?.map((categorie) => (
-            <CategoryCard
-              key={categorie.id}
-              icon={icons[categorie.icone] ?? "📦"}
-              title={categorie.nom}
-              href={`/categorie/${categorie.slug}`}
-            />
-          ))}
-
-        </div>
-
+      <div
+        className={`mt-16 grid gap-6 ${
+          categories && categories.length <= 4
+            ? "grid-cols-1 sm:grid-cols-2"
+            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        }`}
+      >
+        {categories?.map((categorie) => (
+          <CategoryCard
+            key={categorie.id}
+            icon={categorie.nom.toLowerCase()}
+            title={categorie.nom}
+            href={`/categorie/${categorie.slug}`}
+            count={articleCount[categorie.nom.toLowerCase()] ?? 0}
+          />
+        ))}
       </div>
-    </main>
+    </AppLayout>
   );
 }

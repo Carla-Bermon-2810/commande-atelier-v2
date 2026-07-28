@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
-import { useCart } from "@/context/CartContext";
+import Navbar from "@/components/layout/Navbar";
+import { useCart } from "@/context/cart-context";
 
 export default function PanierPage() {
   const {
