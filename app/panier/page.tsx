@@ -83,48 +83,7 @@ export default function PanierPage() {
                   article={article}
                 />
               ))}
-                
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        {article.article}
-                      </h2>
-
-                      <p className="text-sm text-gray-500">
-                        {article.famille}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => removeFromCart(article.article)}
-                      className="rounded-lg bg-red-500 px-3 py-2 text-white hover:bg-red-600"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-
-                  <div className="mt-5 flex items-center gap-4">
-                    <button
-                      onClick={() => decreaseQuantity(article.article)}
-                      className="h-10 w-10 rounded-lg bg-gray-200 text-xl hover:bg-gray-300"
-                    >
-                      −
-                    </button>
-
-                    <span className="min-w-[30px] text-center text-xl font-bold">
-                      {article.quantite}
-                    </span>
-
-                    <button
-                      onClick={() => increaseQuantity(article.article)}
-                      className="h-10 w-10 rounded-lg bg-blue-600 text-xl text-white hover:bg-blue-700"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            </div>  
 
             <div className="mt-8 rounded-xl bg-white p-6 shadow">
               <h2 className="mb-4 text-2xl font-bold">
