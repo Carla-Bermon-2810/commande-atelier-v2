@@ -4,21 +4,42 @@ import { Search, ScanSearch } from "lucide-react";
 
 export default function SearchBar() {
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="flex items-center rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-lg shadow-blue-100/30">
+    <div className="mx-auto w-full max-w-4xl">
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/40 transition-all duration-300 hover:shadow-xl">
 
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
-          <Search className="h-6 w-6 text-blue-600" />
+        {/* Icône */}
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F95516]/10">
+          <Search
+            className="h-6 w-6 text-[#F95516]"
+            strokeWidth={2.2}
+          />
         </div>
 
+        {/* Champ */}
         <input
           type="text"
           placeholder="Rechercher un produit, une référence ou une famille..."
-          className="flex-1 bg-transparent px-5 text-lg outline-none placeholder:text-gray-400"
+          className="flex-1 border-none bg-transparent text-lg text-[#2F3437] outline-none placeholder:text-slate-400"
         />
 
-        <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700">
-          <ScanSearch className="h-5 w-5" />
+        {/* Bouton */}
+        <button
+          className="
+            flex items-center gap-2
+            rounded-2xl
+            bg-[#F95516]
+            px-7
+            py-4
+            font-semibold
+            text-white
+            transition-all
+            duration-300
+            hover:scale-[1.02]
+            hover:bg-[#dd4b13]
+            active:scale-95
+          "
+        >
+          <ScanSearch size={20} />
           Rechercher
         </button>
 

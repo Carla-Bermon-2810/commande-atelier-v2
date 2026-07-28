@@ -128,3 +128,105 @@
     @apply font-sans;
   }
 }
+/* ============================= */
+/*        DECOUPE LASER UI        */
+/* ============================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #f5f6f8;
+  color: #2f3437;
+  font-family: "Nunito Sans", sans-serif;
+}
+
+/* Titres */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #2f3437;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Sélection */
+
+::selection {
+  background: #f95516;
+  color: white;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eceef1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7ccd1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f95516;
+}
+
+/* Images */
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Boutons */
+
+button {
+  transition: all .25s ease;
+}
+
+/* Inputs */
+
+input,
+select,
+textarea {
+  transition: all .2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #f95516 !important;
+  box-shadow: 0 0 0 4px rgba(249, 85, 22, .12);
+}
+
+/* Liens */
+
+a {
+  transition: all .2s ease;
+}
+
+/* Cartes */
+
+.card-industrie {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  transition: .25s;
+}
+
+.card-industrie:hover {
+  border-color: #f95516;
+  box-shadow: 0 15px 40px rgba(0,0,0,.08);
+  transform: translateY(-3px);
+}

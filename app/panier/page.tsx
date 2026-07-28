@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { useCart } from "@/context/cart-context";
+import CartItem from "@/components/cart/CartItem";
 
 export default function PanierPage() {
   const {
     cart,
     clearCart,
-    increaseQuantity,
-    decreaseQuantity,
-    removeFromCart,
   } = useCart();
 
   const [demandeur, setDemandeur] = useState("");
@@ -79,11 +77,13 @@ export default function PanierPage() {
         ) : (
           <>
             <div className="space-y-4">
-              {cart.map((article) => (
-                <div
+            {cart.map((article) => (
+                <CartItem
                   key={article.article}
-                  className="rounded-xl bg-white p-5 shadow"
-                >
+                  article={article}
+                />
+              ))}
+                
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-lg font-semibold">

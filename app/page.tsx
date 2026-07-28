@@ -35,9 +35,8 @@ catalogue?.forEach((article) => {
   return (
     <AppLayout>
       <Hero />
-
       <div
-        className={`mt-16 grid gap-6 ${
+        className={`mt-1 grid gap-6 ${
           categories && categories.length <= 4
             ? "grid-cols-1 sm:grid-cols-2"
             : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
