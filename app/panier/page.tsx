@@ -76,16 +76,20 @@ export default function PanierPage() {
           </div>
         ) : (
           <>
-            <div className="space-y-4">
-            {cart.map((article) => (
-                <CartItem
-                  key={article.article}
-                  article={article}
-                />
-              ))}
-            </div>  
+            <div className="mt-8 grid gap-8 lg:grid-cols-3">
 
-            <div className="mt-8 rounded-xl bg-white p-6 shadow">
+              {/* Liste des articles */}
+              <div className="space-y-4 lg:col-span-2">
+                {cart.map((article) => (
+                  <CartItem
+                    key={article.article}
+                    article={article}
+                  />
+                ))}
+              </div>
+
+              {/* Résumé */}
+              <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-2xl font-bold">
                 Informations de la commande
               </h2>
@@ -114,23 +118,25 @@ export default function PanierPage() {
                 className="w-full rounded-lg border p-3"
               />
 
-              <div className="mt-8 flex gap-4">
+                <div className="mt-8 space-y-3">
                 <button
-                  onClick={clearCart}
-                  className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
-                >
-                  🗑️ Vider le panier
-                </button>
+                onClick={clearCart}
+                className="w-full rounded-xl border border-red-600 bg-white py-3 font-semibold text-red-600 transition hover:bg-red-50"
+              >
+                🗑️ Vider le panier
+              </button>
 
-                <button
-                  onClick={envoyerCommande}
-                  className="rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
-                >
-                  📧 Envoyer la commande
-                </button>
+              <button
+                onClick={envoyerCommande}
+                className="w-full rounded-xl bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
+              >
+                📧 Envoyer la commande
+              </button>
               </div>
-            </div>
-          </>
+            </div> {/* fin du résumé */}
+
+          </div> {/* fin du grid */}
+        </>
         )}
       </div>
     </main>

@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
+import { supprimerCommande } from "./actions";
+import { Trash2, Eye } from "lucide-react";
 
 export default async function CommandesPage() {
   const { data: commandes, error } = await supabase
@@ -78,13 +80,32 @@ export default async function CommandesPage() {
                   </td>
 
                   <td className="p-4">
+                    <div className="flex gap-3">
                       <Link
                         href={`/admin/commandes/${commande.id}`}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
+                        title="Voir"
+                        className="rounded-lg bg-[#F95516] p-3 text-white transition hover:bg-[#dd4b13]"
                       >
-                        Voir
+                        <Eye size={20} />
                       </Link>
-                    </td>
+
+                      <form action={supprimerCommande}>
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={commande.id}
+                        />
+
+                        <button
+                          type="submit"
+                          title="Supprimer"
+                          className="rounded-lg bg-red-600 p-3 text-white transition hover:bg-red-1000"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </form>
+                    </div>
+                  </td>
 
                 </tr>
 

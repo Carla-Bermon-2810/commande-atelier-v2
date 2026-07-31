@@ -28,6 +28,8 @@ interface CartContextType {
 
   decreaseQuantity: (article: string) => void;
 
+  updateQuantity: (article: string, quantite: number) => void;
+
   clearCart: () => void;
 }
 
@@ -105,7 +107,20 @@ export function CartProvider({
         .filter((a) => a.quantite > 0)
     );
   }
-
+  
+  function updateQuantity(article: string, quantite: number) {
+    setCart((oldCart) =>
+      oldCart.map((a) =>
+        a.article === article
+          ? {
+              ...a,
+              quantite: Math.max(1, quantite),
+            }
+          : a
+      )
+    );
+  }
+  
   function removeFromCart(article: string) {
     setCart((oldCart) =>
       oldCart.filter((a) => a.article !== article)
@@ -130,6 +145,7 @@ export function CartProvider({
         removeFromCart,
         increaseQuantity,
         decreaseQuantity,
+        updateQuantity,
         clearCart,
       }}
     >

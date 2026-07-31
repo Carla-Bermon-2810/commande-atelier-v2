@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/layout/AppLayout";
+import Link from "next/link";
 
 export default async function CommandePage({
   params,
@@ -30,6 +31,13 @@ export default async function CommandePage({
   return (
     <AppLayout>
       <div className="mx-auto max-w-5xl space-y-8 p-8">
+
+        <Link
+          href="/admin/commandes"
+          className="mb-6 inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+        >
+          ← Retour à l'historique
+        </Link>
 
         <div className="rounded-2xl border bg-white p-8 shadow">
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 import ArticleList from "./ArticleList";
-import ArticleForm from "./ArticleForm";
+import AdminArticleCard from "./AdminArticleCard";
 
 export default function Articles() {
 
@@ -17,14 +17,9 @@ export default function Articles() {
   const [familles, setFamilles] = useState<any[]>([]);
 
   const [recherche, setRecherche] = useState("");
-
-  const [articleSelectionne, setArticleSelectionne] = useState<any>(null);
-
-  const [produit, setProduit] = useState("");
-  const [categorie, setCategorie] = useState("");
-  const [famille, setFamille] = useState("");
-  const [grain, setGrain] = useState("");
-  const [dimension, setDimension] = useState("");
+  const [filtreCategorie, setFiltreCategorie] = useState("");
+  const [filtreFamille, setFiltreFamille] = useState("");
+  const [filtrePhoto, setFiltrePhoto] = useState("tous");
 
   // ===========================
   // Chargement
@@ -86,194 +81,94 @@ export default function Articles() {
     setFamilles(data || []);
   }
 
-  // ===========================
-  // Sélection
-  // ===========================
-
-  function selectionnerArticle(article: any) {
-
-    setArticleSelectionne(article);
-
-    setProduit(article.produit || "");
-    setCategorie(article.categorie || "");
-    setFamille(article.famille || "");
-    setGrain(article.grain || "");
-    setDimension(article.dimension || "");
-
-  }
-
-    // ===========================
-  // Nouvel article
-  // ===========================
-
-  function nouvelArticle() {
-    setArticleSelectionne({
-      id: null,
-      photo: "",
-    });
-
-    setProduit("");
-    setCategorie("");
-    setFamille("");
-    setGrain("");
-    setDimension("");
-  }
-  
-  // ===========================
-  // Enregistrer
-  // ===========================
-
-  async function enregistrerArticle() {
-    if (produit.trim() === "") {
-      alert("Le produit est obligatoire.");
-      return;
-    }
-
-    const donnees = {
-      produit,
-      categorie,
-      famille,
-      grain,
-      dimension,
-    };
-
-    let error;
-
-    if (articleSelectionne?.id) {
-      ({ error } = await supabase
-        .from("catalogue")
-        .update(donnees)
-        .eq("id", articleSelectionne.id));
-    } else {
-      ({ error } = await supabase
-        .from("catalogue")
-        .insert(donnees));
-    }
-
-    if (error) {
-      console.error(error);
-      alert("Erreur lors de l'enregistrement.");
-      return;
-    }
-
-    await chargerArticles();
-
-    // Si c'était un nouvel article, on récupère le dernier créé
-    if (!articleSelectionne?.id) {
-      const { data } = await supabase
-        .from("catalogue")
-        .select("*")
-        .order("id", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (data) {
-        selectionnerArticle(data);
-      }
-    } else {
-      const articleMisAJour = {
-        ...articleSelectionne,
-        ...donnees,
-      };
-
-      selectionnerArticle(articleMisAJour);
-    }
-
-    alert("Article enregistré.");
-  }
-
-  // ===========================
-  // Supprimer
-  // ===========================
-
-  async function supprimerArticle() {
-    if (!articleSelectionne?.id) return;
-  
-    const confirmation = confirm(
-      `Supprimer définitivement "${articleSelectionne.produit}" ?`
-    );
-  
-    if (!confirmation) return;
-  
-    try {
-      // Supprimer la photo du bucket
-
-      if (articleSelectionne.photo) {
-        await supabase.storage
-          .from("photos")
-          .remove([articleSelectionne.photo]);
-      }
-  
-      // Supprimer l'article
-      const { data, error } = await supabase
-  .from("catalogue")
-  .delete()
-  .eq("id", articleSelectionne.id)
-  .select();
-
-console.log("Article supprimé :", data);
-console.log("Erreur :", error);
-
-if (error) throw error;
-  
-      // Mise à jour de l'interface
-      setArticleSelectionne(null);
-      setProduit("");
-      setCategorie("");
-      setFamille("");
-      setGrain("");
-      setDimension("");
-  
-      await chargerArticles();
-  
-      alert("Article supprimé.");
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message);
-    }
-  }
-
     // ===========================
   // Interface
   // ===========================
 
   return (
-    <div className="grid grid-cols-[340px_1fr] gap-8">
+    <div className="grid h-[calc(100vh-220px)] grid-cols-[380px_1fr] gap-6">
 
-      <ArticleList
-        articles={articles}
-        recherche={recherche}
-        setRecherche={setRecherche}
-        articleSelectionne={articleSelectionne}
-        onSelect={selectionnerArticle}
-        onNouveau={nouvelArticle}
-      />
+    <div className="sticky top-4 h-fit">
+    <ArticleList
+      articles={articles}
+      categories={categories}
+      familles={familles}
 
-      <ArticleForm
-        produit={produit}
-        setProduit={setProduit}
+      recherche={recherche}
+      setRecherche={setRecherche}
 
-        categorie={categorie}
-        setCategorie={setCategorie}
+      filtreCategorie={filtreCategorie}
+      setFiltreCategorie={setFiltreCategorie}
 
-        famille={famille}
-        setFamille={setFamille}
+      filtreFamille={filtreFamille}
+      setFiltreFamille={setFiltreFamille}
+    />
+    </div>
 
-        grain={grain}
-        setGrain={setGrain}
-
-        dimension={dimension}
-        setDimension={setDimension}
-
-        categories={categories}
-        familles={familles}
-
-        articleSelectionne={articleSelectionne}
-
-        onSave={enregistrerArticle}
-        onDelete={supprimerArticle}
-      />
-
+          <div className="h-full overflow-y-auto rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-6 flex justify-end">
+            <select
+              value={filtrePhoto}
+              onChange={(e) => setFiltrePhoto(e.target.value)}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2"
+            >
+              <option value="tous">📦 Tous les articles</option>
+              <option value="avec">🖼️ Avec photo</option>
+              <option value="sans">📷 Sans photo</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {articles
+            .filter((a) => {
+              const texte = [
+                a.produit,
+                a.categorie,
+                a.famille,
+                a.grain,
+                a.dimension,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+            
+              const rechercheOK = texte.includes(recherche.toLowerCase());
+            
+              const categorieOK =
+                !filtreCategorie ||
+                a.categorie?.trim().toLowerCase() ===
+                  filtreCategorie.trim().toLowerCase();
+            
+              const familleOK =
+                !filtreFamille ||
+                a.famille?.trim().toLowerCase() ===
+                  filtreFamille.trim().toLowerCase();
+            
+              const aUnePhoto =
+                a.photo &&
+                a.photo.trim() !== "";
+            
+              const photoOK =
+                filtrePhoto === "tous"
+                  ? true
+                  : filtrePhoto === "avec"
+                  ? aUnePhoto
+                  : !aUnePhoto;
+            
+              return (
+                rechercheOK &&
+                categorieOK &&
+                familleOK &&
+                photoOK
+              );
+            })
+            .map((article) => (
+              <AdminArticleCard
+                key={article.id}
+                article={article}
+              />
+            ))}
+        </div>
+      </div>
     </div>
   );
 }

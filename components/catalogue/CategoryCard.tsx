@@ -44,15 +44,15 @@ export default function CategoryCard({
       className="h-full"
     >
       <Link href={href} className="block h-full">
-        <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-2xl">
+        <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl">
 
           {/* Barre orange */}
           <div className="absolute left-0 top-0 h-full w-0.5 bg-[#F95516] opacity-0 transition-all duration-300 group-hover:opacity-100" />
 
           <div className="flex items-center justify-between">
 
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-[#626B72] transition-all duration-300 group-hover:bg-[#F95516] group-hover:text-white">
-              <Icon size={30} strokeWidth={2} />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-[#626B72] transition-all duration-300 group-hover:bg-[#F95516] group-hover:text-white">
+              <Icon size={26} strokeWidth={2} />
             </div>
 
             <ArrowRight
@@ -62,15 +62,15 @@ export default function CategoryCard({
 
           </div>
 
-          <div className="mt-8 flex-1">
+          <div className="mt-5 flex-1">
 
-            <h3 className="text-2xl font-bold uppercase tracking-wide text-[#2F3437]">
+            <h3 className="text-xl font-bold uppercase tracking-wide text-[#2F3437]">
               {title}
             </h3>
 
-            <div className="mt-4 h-px w-12 bg-slate-200 transition-all duration-300 group-hover:w-24 group-hover:bg-[#F95516]" />
+            <div className="mt-3 h-px w-12 bg-slate-200 transition-all duration-300 group-hover:w-24 group-hover:bg-[#F95516]" />
 
-            <p className="mt-4 text-sm text-[#626B72]">
+            <p className="mt-3 text-sm text-[#626B72]">
               {count} article{count > 1 ? "s" : ""}
             </p>
 

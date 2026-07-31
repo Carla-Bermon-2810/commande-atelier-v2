@@ -85,30 +85,39 @@ if (error) {
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) {
-            upload(file);
-          }
+          if (file) upload(file);
         }}
       />
-
-      <div
-        onClick={() => inputRef.current?.click()}
-        className="flex h-72 w-72 cursor-pointer items-center justify-center overflow-hidden rounded-xl border bg-gray-100 transition hover:bg-gray-200"
-      >
-        {loading ? (
-          <div className="text-gray-500">Upload...</div>
-        ) : imageUrl ? (
-          <img
-            src={imageUrl}
-            alt="Photo"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="text-center text-gray-500">
-            <div className="mb-2 text-5xl">📷</div>
-            <div>Cliquer pour ajouter une photo</div>
-          </div>
-        )}
+  
+      <div className="flex flex-col items-center gap-5">
+  
+        <div
+          className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border bg-white"
+        >
+          {loading ? (
+            <div className="text-gray-500">Upload...</div>
+          ) : imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Photo"
+              className="h-full w-full object-contain p-6"
+            />
+          ) : (
+            <div className="text-center text-gray-500">
+              <div className="mb-2 text-5xl">📷</div>
+              <div>Aucune photo</div>
+            </div>
+          )}
+        </div>
+  
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-medium text-slate-700 transition hover:bg-slate-100"
+        >
+          📷 Changer l'image
+        </button>
+  
       </div>
     </>
   );

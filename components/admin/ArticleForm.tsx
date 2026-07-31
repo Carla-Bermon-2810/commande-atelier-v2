@@ -1,222 +1,183 @@
 "use client";
 
+import { useState } from "react";
 import PhotoUploader from "./PhotoUploader";
 
 type Props = {
-  produit: string;
-  setProduit: (v: string) => void;
-
-  categorie: string;
-  setCategorie: (v: string) => void;
-
-  famille: string;
-  setFamille: (v: string) => void;
-
-  grain: string;
-  setGrain: (v: string) => void;
-
-  dimension: string;
-  setDimension: (v: string) => void;
-
+  article: any;
   categories: any[];
   familles: any[];
 
-  articleSelectionne: any;
-
-  onSave: () => void;
-  onDelete: () => void;
+  onSave: (data: any) => void;
+  onDelete?: () => void;
 };
 
 export default function ArticleForm({
-  produit,
-  setProduit,
-
-  categorie,
-  setCategorie,
-
-  famille,
-  setFamille,
-
-  grain,
-  setGrain,
-
-  dimension,
-  setDimension,
-
+  article,
   categories,
   familles,
-
-  articleSelectionne,
-
   onSave,
   onDelete,
 }: Props) {
-  
-  if (!articleSelectionne) {
-    return (
-      <div className="flex h-full items-center justify-center rounded-xl border bg-white text-gray-400">
-        Sélectionnez un article
-      </div>
-    );
-  }
-
+  const [produit, setProduit] = useState(article?.produit ?? "");
+  const [categorie, setCategorie] = useState(article?.categorie ?? "");
+  const [famille, setFamille] = useState(article?.famille ?? "");
+  const [grain, setGrain] = useState(article?.grain ?? "");
+  const [dimension, setDimension] = useState(article?.dimension ?? "");
+  const [photo, setPhoto] = useState(article?.photo ?? "");
   return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
+    <div className="rounded-2xl border bg-white p-8 shadow-sm">
 
-      {/* Photo */}
+      <h2 className="mb-8 text-2xl font-bold text-slate-800">
+        {article ? "Modifier l'article" : "Nouvel article"}
+      </h2>
 
-      <div className="mb-8 flex justify-center">
+      <div className="grid gap-16 md:grid-cols-[420px_minmax(500px,1fr)]">
 
+        {/* Photo */}
+
+        <div className="w-full">
+          <div className="flex items-center justify-center rounded-2xl border bg-slate-50 p-6">
+          {article?.id ? (
   <PhotoUploader
-    articleId={articleSelectionne.id}
-    photo={articleSelectionne.photo}
-    onUploaded={(photo) => {
-      articleSelectionne.photo = photo;
+    articleId={article.id}
+    photo={photo}
+    onUploaded={(nouvellePhoto) => {
+      setPhoto(nouvellePhoto);
     }}
   />
+) : (
+  <div className="flex aspect-square w-full flex-col items-center justify-center rounded-xl border bg-slate-50 text-center text-slate-500">
+    <div className="mb-3 text-5xl">📷</div>
+    <p className="font-semibold">
+      La photo pourra être ajoutée après la création de l'article.
+    </p>
+    <p className="mt-2 text-sm">
+      Commencez par enregistrer l'article.
+    </p>
+  </div>
+)}
+          </div>
+        </div>
 
-</div>
+        {/* Formulaire */}
 
-      {/* Produit */}
+        <div className="space-y-8">
 
-      <div className="mb-5">
+          <div>
+            <label className="mb-2 block font-semibold">
+              Produit
+            </label>
 
-        <label className="mb-2 block font-semibold">
-          Produit
-        </label>
+            <input
+              value={produit}
+              onChange={(e) => setProduit(e.target.value)}
+              className="w-full rounded-xl border px-4 py-4 text-base"
+            />
+          </div>
 
-        <input
-          value={produit}
-          onChange={(e) => setProduit(e.target.value)}
-          className="w-full rounded-lg border p-3"
-        />
+          <div>
+            <label className="mb-2 block font-semibold">
+              Catégorie
+            </label>
 
-      </div>
-
-      {/* Catégorie */}
-
-      <div className="mb-5">
-
-        <label className="mb-2 block font-semibold">
-          Catégorie
-        </label>
-
-        <select
-          value={categorie}
-          onChange={(e) => {
-            setCategorie(e.target.value);
-            setFamille("");
-          }}
-          className="w-full rounded-lg border p-3"
-        >
-
-          <option value="">
-            Sélectionner...
-          </option>
-
-          {categories.map((cat) => (
-            <option
-              key={cat.id}
-              value={cat.nom}
+            <select
+              value={categorie}
+              onChange={(e) => {
+                setCategorie(e.target.value);
+                setFamille("");
+              }}
+              className="w-full rounded-xl border px-4 py-4 text-base"
             >
-              {cat.nom}
-            </option>
-          ))}
+              <option value="">Sélectionner...</option>
 
-        </select>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.nom}>
+                  {cat.nom}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      </div>
+          <div>
+            <label className="mb-2 block font-semibold">
+              Famille
+            </label>
 
-      {/* Famille */}
+            <select
+              value={famille}
+              onChange={(e) => setFamille(e.target.value)}
+              className="w-full rounded-xl border px-4 py-4 text-base"
+            >
+              <option value="">Sélectionner...</option>
 
-      <div className="mb-5">
+              {familles
+  .filter(
+    (f) =>
+      f.categorie?.trim().toUpperCase() ===
+      categorie.trim().toUpperCase()
+  )
+  .map((f) => (
+    <option key={f.id} value={f.famille}>
+      {f.famille}
+    </option>
+  ))}
+            </select>
+          </div>
 
-        <label className="mb-2 block font-semibold">
-          Famille
-        </label>
+          <div>
+            <label className="mb-2 block font-semibold">
+              Grain
+            </label>
 
-        <select
-          value={famille}
-          onChange={(e) => setFamille(e.target.value)}
-          className="w-full rounded-lg border p-3"
-        >
+            <input
+              value={grain}
+              onChange={(e) => setGrain(e.target.value)}
+              className="w-full rounded-xl border px-4 py-4 text-base"
+            />
+          </div>
 
-          <option value="">
-            Sélectionner...
-          </option>
+          <div>
+            <label className="mb-2 block font-semibold">
+              Dimension
+            </label>
 
-          {familles
-            .filter((f) => f.categorie === categorie)
-            .map((f) => (
-              <option
-                key={f.id}
-                value={f.famille}
+            <input
+              value={dimension}
+              onChange={(e) => setDimension(e.target.value)}
+              className="w-full rounded-xl border px-4 py-4 text-base"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+
+            <button
+              onClick={() =>
+                onSave({
+                  produit,
+                  categorie,
+                  famille,
+                  grain,
+                  dimension,
+                  photo,
+                })
+              }
+              className="flex-1 rounded-xl bg-[#F95516] py-3 font-semibold text-white transition hover:opacity-90"
+            >
+              💾 Enregistrer
+            </button>
+
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700"
               >
-                {f.famille}
-              </option>
-            ))}
-
-        </select>
-
-      </div>
-
-      {/* Grain */}
-
-      {grain !== "" && (
-
-        <div className="mb-5">
-
-          <label className="mb-2 block font-semibold">
-            Grain
-          </label>
-
-          <input
-            value={grain}
-            onChange={(e) => setGrain(e.target.value)}
-            className="w-full rounded-lg border p-3"
-          />
+                🗑️
+              </button>
+            )}
+          </div>
 
         </div>
-
-      )}
-
-      {/* Dimension */}
-
-      {dimension !== "" && (
-
-        <div className="mb-8">
-
-          <label className="mb-2 block font-semibold">
-            Dimension
-          </label>
-
-          <input
-            value={dimension}
-            onChange={(e) => setDimension(e.target.value)}
-            className="w-full rounded-lg border p-3"
-          />
-
-        </div>
-
-      )}
-
-      {/* Boutons */}
-
-      <div className="flex gap-3">
-
-        <button
-          onClick={onSave}
-          className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
-        >
-          💾 Enregistrer
-        </button>
-
-        <button
-          onClick={onDelete}
-          className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700"
-        >
-          🗑️
-        </button>
 
       </div>
 

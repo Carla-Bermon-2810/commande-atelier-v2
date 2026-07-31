@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FolderOpen } from "lucide-react";
+import { ArrowRight, FolderOpen, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/lib/supabase";
 
@@ -63,6 +63,15 @@ export default async function CategoriePage({ params }: PageProps) {
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-[#F95516] hover:text-[#F95516]"
+        >
+          <ArrowLeft size={18} />
+          Retour
+        </Link>
+      </div>
 
         {/* Hero */}
 
@@ -108,17 +117,15 @@ export default async function CategoriePage({ params }: PageProps) {
                 famille.famille
               )}`}
             >
-              <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-500 hover:shadow-xl">
+              <div className="group rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl">
 
                 <div className="mb-6 flex items-start justify-between">
 
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-[#F95516] transition group-hover:bg-[#F95516] group-hover:text-white">
+                  <FolderOpen size={28} />
+                </div>
 
-                    <FolderOpen size={28} />
-
-                  </div>
-
-                  <ArrowRight className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-blue-600" />
+                <ArrowRight className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#F95516]" />
 
                 </div>
 

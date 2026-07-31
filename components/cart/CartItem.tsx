@@ -18,11 +18,14 @@ export default function CartItem({ article }: Props) {
   const {
     increaseQuantity,
     decreaseQuantity,
+    updateQuantity,
     removeFromCart,
   } = useCart();
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-[#F95516] hover:shadow-xl">
+    <div
+    className="cursor-pointer overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl"
+    >
 
       <div className="flex flex-col gap-6 p-6 md:flex-row md:items-center">
 
@@ -58,28 +61,80 @@ export default function CartItem({ article }: Props) {
 
         {/* Quantité */}
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-72 flex-col gap-4 rounded-2xl bg-slate-50 p-4">
 
-          <button
-            onClick={() => decreaseQuantity(article.article)}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 hover:border-[#F95516] hover:text-[#F95516]"
-          >
-            <Minus size={18} />
-          </button>
+        <span className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+          Quantité
+        </span>
 
-          <span className="min-w-[35px] text-center text-xl font-bold">
-            {article.quantite}
-          </span>
+        <div className="flex gap-4 text-sm">
 
-          <button
-            onClick={() => increaseQuantity(article.article)}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F95516] text-white hover:bg-[#dd4b13]"
-          >
-            <Plus size={18} />
-          </button>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={`mode-${article.article}`}
+              value="unite"
+            />
+            À l'unité
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={`mode-${article.article}`}
+              value="boite"
+            />
+            Par boîte
+          </label>
 
         </div>
 
+        {/* Mode unité */}
+
+        <div>
+          <label className="mb-1 block text-sm text-slate-500">
+            Nombre d'unités
+          </label>
+
+          <input
+            type="number"
+            className="w-full rounded-xl border p-2"
+          />
+        </div>
+
+        {/* Mode boîte */}
+
+        <div className="space-y-3">
+
+          <div>
+
+            <label className="mb-1 block text-sm text-slate-500">
+              Nombre de boîtes
+            </label>
+
+            <input
+              type="number"
+              className="w-full rounded-xl border p-2"
+            />
+
+          </div>
+
+          <div>
+
+            <label className="mb-1 block text-sm text-slate-500">
+              1 boîte contient
+            </label>
+
+            <input
+              type="number"
+              className="w-full rounded-xl border p-2"
+            />
+
+          </div>
+
+        </div>
+
+        </div>
         {/* Supprimer */}
 
         <button

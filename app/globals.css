@@ -165,21 +165,20 @@ h6 {
 /* Scrollbar */
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #eceef1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c7ccd1;
+  background: #d1d5db;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f95516;
+  background: #9ca3af;
 }
 
 /* Images */

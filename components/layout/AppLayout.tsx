@@ -10,7 +10,7 @@ export default function AppLayout({ children }: Props) {
     <main className="min-h-screen bg-slate-50">
       <Header />
 
-      <div className="mx-auto max-w-[1500px] px-8 py-10">
+      <div className="mx-auto max-w-[1500px] px-8 py-6">
         {children}
       </div>
     </main>

@@ -1,111 +1,149 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Props = {
   articles: any[];
+  categories: any[];
+  familles: any[];
+
   recherche: string;
   setRecherche: (value: string) => void;
-  articleSelectionne: any;
-  onSelect: (article: any) => void;
-  onNouveau: () => void;
+
+  filtreCategorie: string;
+  setFiltreCategorie: (value: string) => void;
+
+  filtreFamille: string;
+  setFiltreFamille: (value: string) => void;
+  
 };
 
 export default function ArticleList({
   articles,
+  categories,
+  familles,
   recherche,
   setRecherche,
-  articleSelectionne,
-  onSelect,
-  onNouveau,
+  filtreCategorie,
+  setFiltreCategorie,
+  filtreFamille,
+  setFiltreFamille,
 }: Props) {
+  const router = useRouter();
+  const famillesFiltrees = familles.filter(
+    (f) =>
+      !filtreCategorie ||
+      f.categorie?.trim().toLowerCase() ===
+        filtreCategorie.trim().toLowerCase()
+  );
+  
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col rounded-xl border bg-white">
+  
+      {/* Zone fixe */}
+      <div className="border-b p-5">
+  
+        {/* Recherche */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="🔍 Rechercher un article..."
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-[#F95516] focus:outline-none"
+          />
+        </div>
+  
+        {/* Nouveau */}
+        <button
+          onClick={() => router.push("/admin/articles/nouveau")}
+          className="w-full rounded-xl bg-[#F95516] py-3 font-semibold text-white transition hover:opacity-90"
+        >
+          ➕ Nouvel article
+        </button>
+  
+      </div>
+  
+      {/* Zone qui défile */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {/* Catégories */}
+        <div className="mb-5">
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Catégories
+          </h3>
 
-      {/* Barre de recherche */}
-
-      <input
-        type="text"
-        placeholder="🔍 Rechercher un article..."
-        value={recherche}
-        onChange={(e) => setRecherche(e.target.value)}
-        className="mb-3 rounded-xl border p-3"
-      />
-
-      {/* Nouveau */}
-
-      <button
-        onClick={onNouveau}
-        className="mb-4 rounded-xl bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
-      >
-        ➕ Nouvel article
-      </button>
-
-      {/* Liste */}
-
-      <div className="flex-1 overflow-y-auto rounded-xl border bg-white">
-
-        {articles
-          .filter((a) =>
-            a.produit
-              ?.toLowerCase()
-              .includes(recherche.toLowerCase())
-          )
-          .map((a) => (
+          <div className="flex flex-wrap gap-2">
 
             <button
-              key={a.id}
-              onClick={() => onSelect(a)}
-              className={`w-full border-b p-4 text-left transition
-
-                ${
-                  articleSelectionne?.id === a.id
-                    ? "bg-blue-100"
-                    : "hover:bg-gray-50"
-                }
-              `}
+              onClick={() => {
+                setFiltreCategorie("");
+                setFiltreFamille("");
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                filtreCategorie === ""
+                  ? "bg-[#F95516] text-white"
+                  : "border bg-white hover:bg-gray-100"
+              }`}
             >
-
-              <div className="flex items-center gap-3">
-
-                {/* Photo */}
-
-                <img
-                  src={
-                    a.photo
-                      ? `${supabase.storage
-                          .from("photos")
-                          .getPublicUrl(a.photo).data.publicUrl}?t=${Date.now()}`
-                      : "/placeholder.png"
-                  }
-                  alt={a.produit}
-                  className="h-14 w-14 rounded-lg border object-cover"
-                />
-
-                <div className="flex-1">
-
-                  <div className="font-semibold">
-                    {a.produit}
-                  </div>
-
-                  <div className="mt-1 text-xs text-gray-500">
-                    {a.categorie}
-                  </div>
-
-                  <div className="text-xs text-gray-400">
-                    {a.famille}
-                  </div>
-
-                </div>
-
-              </div>
-
+              Toutes
             </button>
 
-          ))}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setFiltreCategorie(cat.nom);
+                  setFiltreFamille("");
+                }}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filtreCategorie === cat.nom
+                    ? "bg-[#F95516] text-white"
+                    : "border bg-white hover:bg-gray-100"
+                }`}
+              >
+                {cat.nom}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {/* Familles */}
+        {filtreCategorie && (
+        <div className="mb-5">
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Familles
+          </h3>
+
+          <div className="flex flex-wrap gap-2">
+
+            <button
+              onClick={() => setFiltreFamille("")}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                filtreFamille === ""
+                  ? "bg-[#F95516] text-white"
+                  : "border bg-white hover:bg-gray-100"
+              }`}
+            >
+              Toutes
+            </button>
+
+            {famillesFiltrees.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFiltreFamille(f.famille)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filtreFamille === f.famille
+                    ? "bg-[#F95516] text-white"
+                    : "border bg-white hover:bg-gray-100"
+                }`}
+              >
+                  {f.famille}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-
     </div>
   );
 }

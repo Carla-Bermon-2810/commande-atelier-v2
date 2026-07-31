@@ -1,74 +1,118 @@
-import { Bell, ShoppingCart, UserCircle2 } from "lucide-react";
-import CartButton from "@/components/panier/CartButton";
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Bell,
+  FolderOpen,
+  LayoutDashboard,
+  History,
+  Settings,
+  UserCircle2,
+} from "lucide-react";
+import CartButton from "@/components/panier/CartButton";
 
 export default function Header() {
+  const pathname = usePathname();
+
+  const navItems = [
+    {
+      href: "/",
+      label: "Catalogue",
+      icon: FolderOpen,
+    },
+    {
+      href: "/admin/commandes",
+      label: "Historique",
+      icon: History,
+    },
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      href: "/admin",
+      label: "Administration",
+      icon: Settings,
+    },
+  ];
+
   return (
-    <header className="sticky top-6 z-50 mb-10 rounded-3xl border border-gray-200 bg-white/90 px-8 py-5 shadow-sm backdrop-blur">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-4 z-50 mb-8">
+      <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white/90 px-8 py-5 shadow-xl backdrop-blur">
 
         {/* Logo */}
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white">
-            D
+
+        <Link href="/" className="flex items-center gap-4">
+
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F95516] to-[#ff7b45] text-2xl font-bold text-white shadow-lg">
+            DL
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-[#2F3437]">
               Commande Atelier
             </h1>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[#626B72]">
               Découpe Laser • Catalogue interne
             </p>
           </div>
-        </div>
 
-        <nav className="flex items-center gap-6">
-
-        <Link
-          href="/"
-          className="font-medium text-gray-600 transition hover:text-blue-600"
-        >
-          📂 Catalogue
         </Link>
 
-        <Link
-          href="/admin/commandes"
-          className="font-medium text-gray-600 transition hover:text-blue-600"
-        >
-          📦 Historique
-        </Link>
+       {/* Navigation */}
 
-        <Link
-          href="/dashboard"
-          className="font-medium text-gray-600 transition hover:text-blue-600"
-        >
-          🏠 Dashboard
-        </Link>
-        
-        <Link
-        href="/admin"
-        className="font-medium text-gray-600 transition hover:text-blue-600"
-        >
-          ⚙️ Administration
-        </Link>
+        <nav className="hidden lg:flex items-center gap-3">
+          {navItems.map((item) => {
+            const Icon = item.icon;
 
+            const active =
+            pathname === item.href ||
+            (
+              item.href !== "/" &&
+              item.href !== "/admin" &&
+              pathname.startsWith(item.href)
+            ) ||
+            (
+              item.href === "/admin" &&
+              pathname === "/admin"
+            );
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group flex items-center gap-2 rounded-2xl px-5 py-3 font-medium transition-all duration-200 ${
+                  active
+                    ? "bg-orange-50 text-[#F95516] shadow-sm"
+                    : "text-[#626B72] hover:bg-slate-100 hover:text-[#F95516]"
+                }`}
+              >
+                <Icon
+                  size={19}
+                  className="!text-[#F95516] flex-shrink-0"
+                />
+
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-4">
 
-          <button className="rounded-xl p-3 transition hover:bg-gray-100">
-            <Bell className="h-5 w-5 text-gray-600" />
+        <div className="flex items-center gap-3">
+
+          <button className="rounded-2xl border border-slate-200 p-3 transition hover:border-[#F95516] hover:text-[#F95516]">
+            <Bell size={20} />
           </button>
 
-          <div className="rounded-xl bg-blue-600 px-4 py-2 text-white">
-            Panier
-          </div>
+          <CartButton />
 
-          <button className="rounded-xl p-2 transition hover:bg-gray-100">
-            <UserCircle2 className="h-9 w-9 text-gray-600" />
+          <button className="rounded-2xl border border-slate-200 p-2 transition hover:border-[#F95516] hover:text-[#F95516]">
+            <UserCircle2 size={34} />
           </button>
 
         </div>
