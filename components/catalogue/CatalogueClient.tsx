@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Hero from "@/components/layout/Hero";
 import SearchBar from "@/components/catalogue/SearchBar";
 import CategoryCard from "@/components/catalogue/CategoryCard";
+import ArticleCard from "@/components/catalogue/ArticleCard";
+import ProductModal from "@/components/catalogue/ProductModal";
 
 type Category = {
   id: number;
@@ -32,6 +34,8 @@ export default function CatalogueClient({
   catalogue,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [produitSelectionne, setProduitSelectionne] = useState<any>(null);
+  const [modalOuverte, setModalOuverte] = useState(false);
 
   const articleCount = useMemo(() => {
     const count: Record<string, number> = {};
@@ -94,41 +98,97 @@ export default function CatalogueClient({
           ))}
         </div>
       ) : (
-        <div className="mt-8 space-y-3">
-
-          <p className="text-sm font-medium text-slate-500">
+        <div className="mt-8">
+      
+          <p className="mb-5 text-sm font-medium text-slate-500">
             {produitsFiltres.length} résultat(s)
           </p>
+      
+          {produitsFiltres.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {produitsFiltres.map((produit) => (
+  <button
+    key={produit.id}
+    onClick={() => {
+      const variantes = catalogue.filter(
+        (p) => p.produit === produit.produit
+      );
 
-          {produitsFiltres.map((produit) => (
-            <div
-              key={produit.id}
-              className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-[#F95516]"
-            >
-              <div>
+      const grains = variantes
+        .map((p) => p.grain)
+        .filter(Boolean);
 
-                <h3 className="text-lg font-bold text-[#2F3437]">
-                  {produit.produit}
-                </h3>
+      const photo = variantes.find((p) => p.photo)?.photo ?? null;
 
-                <p className="mt-1 text-sm text-slate-500">
-                  {produit.categorie}
-                  {" • "}
-                  {produit.famille}
+      setProduitSelectionne({
+        produit: produit.produit,
+        famille: produit.famille,
+        dimension: produit.dimension,
+        photo,
+        grains,
+      });
 
-                  {produit.grain &&
-                    ` • ${produit.grain}`}
+      setModalOuverte(true);
+    }}
+    className="flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#F95516] hover:shadow-md"
+  >
+    {/* Photo */}
+    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+      {produit.photo ? (
+        <img
+          src={produit.photo}
+          alt={produit.produit}
+          className="h-full w-full object-contain p-2"
+        />
+      ) : (
+        <span className="text-3xl">📦</span>
+      )}
+    </div>
 
-                  {produit.dimension &&
-                    ` • ${produit.dimension}`}
-                </p>
+    {/* Informations */}
+    <div className="flex-1">
+      <h3 className="text-lg font-bold text-[#2F3437]">
+        {produit.produit}
+      </h3>
 
-              </div>
+      <p className="mt-1 text-sm text-slate-500">
+        {produit.categorie}
+        {" • "}
+        {produit.famille}
 
+        {produit.grain &&
+          ` • ${produit.grain}`}
+
+        {produit.dimension &&
+          ` • ${produit.dimension}`}
+      </p>
+    </div>
+
+    {/* Indication */}
+    <div className="text-sm font-semibold text-[#F95516]">
+      Voir →
+    </div>
+  </button>
+))}
             </div>
-          ))}
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-500">
+              Aucun article trouvé.
+            </div>
+          )}
+      
         </div>
       )}
+{produitSelectionne && (
+  <ProductModal
+    open={modalOuverte}
+    onClose={() => {
+      setModalOuverte(false);
+      setProduitSelectionne(null);
+    }}
+    produit={produitSelectionne}
+  />
+)}
     </>
   );
 }
