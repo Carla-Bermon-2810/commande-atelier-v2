@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import {
   X,
   ShoppingCart,
-  Minus,
-  Plus,
   ImageOff,
 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
@@ -30,23 +28,25 @@ export default function ProductModal({
   const { addToCart } = useCart();
 
   const [grainSelectionne, setGrainSelectionne] = useState("");
-  const [quantite, setQuantite] = useState(1);
 
   useEffect(() => {
     if (open) {
       setGrainSelectionne(produit.grains[0] ?? "");
-      setQuantite(1);
     }
   }, [open, produit]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+      }
     };
 
     window.addEventListener("keydown", handleKey);
 
-    return () => window.removeEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+    };
   }, [onClose]);
 
   if (!open) return null;
@@ -79,11 +79,10 @@ export default function ProductModal({
           </div>
 
           {/* Informations */}
-          <div className="p-10">
+          <div className="relative flex flex-col items-center justify-center p-10 text-center">
 
             {/* En-tête */}
-            <div className="flex items-start justify-between">
-
+            <div className="w-full">
               <div>
                 <h2 className="text-3xl font-bold text-[#2F3437]">
                   {produit.produit}
@@ -96,68 +95,78 @@ export default function ProductModal({
                   </p>
                 )}
 
-                <p className="mt-2 text-sm text-slate-500">
-                  {produit.grains.length} grain
-                  {produit.grains.length > 1 ? "s" : ""} disponible
-                  {produit.grains.length > 1 ? "s" : ""}
-                </p>
+                {/* Nombre de grains uniquement s'il y en a */}
+                {produit.grains.length > 0 && (
+                  <p className="mt-2 text-sm text-slate-500">
+                    {produit.grains.length} grain
+                    {produit.grains.length > 1 ? "s" : ""} disponible
+                    {produit.grains.length > 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
 
               <button
-                onClick={onClose}
-                className="rounded-x1 p-2 transition hover:bg-slate-100"
-              >
-                <X />
-              </button>
+  onClick={onClose}
+  className="absolute right-6 top-6 rounded-xl p-2 transition hover:bg-slate-100"
+  aria-label="Fermer"
+>
+  <X />
+</button>
 
             </div>
 
-            {/* Choix du grain */}
-            <div className="mt-6">
+            {/* Choix du grain uniquement s'il existe */}
+            {produit.grains.length > 0 && (
+              <div className="mt-6">
 
-              <p className="mb-3 text-sm font-semibold text-slate-700">
-                Choisir le grain
-              </p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">
+                  Choisir le grain
+                </p>
 
-              <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3">
 
-                {produit.grains.map((grain) => (
-                  <button
-                    key={grain}
-                    onClick={() =>
-                      setGrainSelectionne(grain)
-                    }
-                    className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
-                      grainSelectionne === grain
-                        ? "border-[#F95516] bg-[#F95516] text-white shadow-sm"
-                        : "border-slate-200 bg-white hover:border-[#F95516] shadow-sm"
-                    }`}
-                  >
-                    {grain}
-                  </button>
-                ))}
+                  {produit.grains.map((grain) => (
+                    <button
+                      key={grain}
+                      type="button"
+                      onClick={() => setGrainSelectionne(grain)}
+                      className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
+                        grainSelectionne === grain
+                          ? "border-[#F95516] bg-[#F95516] text-white shadow-sm"
+                          : "border-slate-200 bg-white shadow-sm hover:border-[#F95516]"
+                      }`}
+                    >
+                      {grain}
+                    </button>
+                  ))}
+
+                </div>
 
               </div>
+            )}
 
-            </div>
-
-{/* Ajouter au panier */}
-<div className="mt-6 border-t border-slate-100 pt-6">
-
+            {/* Ajouter au panier */}
+<div
+  className={`border-t border-slate-100 pt-6 ${
+    produit.grains.length > 0 ? "mt-6" : "mt-8"
+  }`}
+>
   <p className="mb-6 text-center text-sm text-slate-600">
     Les quantités seront à renseigner directement dans le panier.
   </p>
 
   <div className="flex justify-end">
     <button
+      type="button"
       onClick={() => {
         addToCart({
-          article: `${produit.produit} ${grainSelectionne}`,
+          article: grainSelectionne
+            ? `${produit.produit} ${grainSelectionne}`
+            : produit.produit,
           famille: produit.famille,
           photo: produit.photo ?? undefined,
           quantite: 1,
         });
-
         onClose();
       }}
       className="flex items-center justify-center gap-3 rounded-2xl bg-[#F95516] px-8 py-3 font-semibold text-white transition hover:bg-[#e04d13]"
@@ -166,12 +175,12 @@ export default function ProductModal({
       Ajouter au panier
     </button>
   </div>
-
 </div>
 
-        </div> 
-      </div>  
-    </div>     
-  </div>       
-);
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
 }

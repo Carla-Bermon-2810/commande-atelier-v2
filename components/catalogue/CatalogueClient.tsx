@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Hero from "@/components/layout/Hero";
 import SearchBar from "@/components/catalogue/SearchBar";
 import CategoryCard from "@/components/catalogue/CategoryCard";
-import ArticleCard from "@/components/catalogue/ArticleCard";
 import ProductModal from "@/components/catalogue/ProductModal";
 
 type Category = {
@@ -24,17 +23,38 @@ type Produit = {
   photo?: string;
 };
 
+type ProduitModal = {
+  produit: string;
+  famille: string;
+  photo?: string | null;
+  dimension?: string | null;
+  grains: string[];
+};
+
 type Props = {
   categories: Category[];
   catalogue: Produit[];
 };
+
+function getPhotoUrl(photo?: string | null) {
+  if (!photo) return null;
+
+  // Si c'est déjà une URL complète, on la garde
+  if (photo.startsWith("http://") || photo.startsWith("https://")) {
+    return photo;
+  }
+
+  // Sinon, on transforme le chemin Supabase
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/photos/${photo}`;
+}
 
 export default function CatalogueClient({
   categories,
   catalogue,
 }: Props) {
   const [search, setSearch] = useState("");
-  const [produitSelectionne, setProduitSelectionne] = useState<any>(null);
+  const [produitSelectionne, setProduitSelectionne] =
+    useState<ProduitModal | null>(null);
   const [modalOuverte, setModalOuverte] = useState(false);
 
   const articleCount = useMemo(() => {
@@ -65,6 +85,36 @@ export default function CatalogueClient({
         .some((v) => v!.toLowerCase().includes(q))
     );
   }, [catalogue, search]);
+
+  const ouvrirProduit = (produit: Produit) => {
+    // Récupère toutes les variantes du même produit
+    const variantes = catalogue.filter(
+      (p) => p.produit === produit.produit
+    );
+
+    // Récupère les grains disponibles sans doublons
+    const grains = Array.from(
+      new Set(
+        variantes
+          .map((p) => p.grain)
+          .filter((grain): grain is string => Boolean(grain))
+      )
+    );
+
+    // On prend la première photo disponible
+    const photo =
+      variantes.find((p) => p.photo)?.photo ?? null;
+
+    setProduitSelectionne({
+      produit: produit.produit,
+      famille: produit.famille,
+      dimension: produit.dimension ?? null,
+      photo: getPhotoUrl(photo),
+      grains,
+    });
+
+    setModalOuverte(true);
+  };
 
   return (
     <>
@@ -99,96 +149,86 @@ export default function CatalogueClient({
         </div>
       ) : (
         <div className="mt-8">
-      
+
           <p className="mb-5 text-sm font-medium text-slate-500">
             {produitsFiltres.length} résultat(s)
           </p>
-      
+
           {produitsFiltres.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {produitsFiltres.map((produit) => (
-  <button
-    key={produit.id}
-    onClick={() => {
-      const variantes = catalogue.filter(
-        (p) => p.produit === produit.produit
-      );
 
-      const grains = variantes
-        .map((p) => p.grain)
-        .filter(Boolean);
+              {produitsFiltres.map((produit) => {
+                const photoUrl = getPhotoUrl(produit.photo);
 
-      const photo = variantes.find((p) => p.photo)?.photo ?? null;
+                return (
+                  <button
+                    key={produit.id}
+                    type="button"
+                    onClick={() => ouvrirProduit(produit)}
+                    className="flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#F95516] hover:shadow-md"
+                  >
+                    {/* Photo */}
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
 
-      setProduitSelectionne({
-        produit: produit.produit,
-        famille: produit.famille,
-        dimension: produit.dimension,
-        photo,
-        grains,
-      });
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={produit.produit}
+                          className="h-full w-full object-contain p-2"
+                        />
+                      ) : (
+                        <span className="text-3xl">
+                          📦
+                        </span>
+                      )}
 
-      setModalOuverte(true);
-    }}
-    className="flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#F95516] hover:shadow-md"
-  >
-    {/* Photo */}
-    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
-      {produit.photo ? (
-        <img
-          src={produit.photo}
-          alt={produit.produit}
-          className="h-full w-full object-contain p-2"
-        />
-      ) : (
-        <span className="text-3xl">📦</span>
-      )}
-    </div>
+                    </div>
 
-    {/* Informations */}
-    <div className="flex-1">
-      <h3 className="text-lg font-bold text-[#2F3437]">
-        {produit.produit}
-      </h3>
+                    {/* Informations */}
+                    <div className="min-w-0 flex-1">
 
-      <p className="mt-1 text-sm text-slate-500">
-        {produit.categorie}
-        {" • "}
-        {produit.famille}
+                      <h3 className="text-lg font-bold text-[#2F3437]">
+                        {produit.produit}
+                      </h3>
 
-        {produit.grain &&
-          ` • ${produit.grain}`}
+                      <p className="mt-1 text-sm text-slate-500">
+                        {produit.categorie}
+                        {" • "}
+                        {produit.famille}
 
-        {produit.dimension &&
-          ` • ${produit.dimension}`}
-      </p>
-    </div>
+                        {produit.grain &&
+                          ` • ${produit.grain}`}
 
-    {/* Indication */}
-    <div className="text-sm font-semibold text-[#F95516]">
-      Voir →
-    </div>
-  </button>
-))}
+                        {produit.dimension &&
+                          ` • ${produit.dimension}`}
+                      </p>
+
+                    </div>
+
+                  </button>
+                );
+              })}
+
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-slate-500">
               Aucun article trouvé.
             </div>
           )}
-      
+
         </div>
       )}
-{produitSelectionne && (
-  <ProductModal
-    open={modalOuverte}
-    onClose={() => {
-      setModalOuverte(false);
-      setProduitSelectionne(null);
-    }}
-    produit={produitSelectionne}
-  />
-)}
+
+      {produitSelectionne && (
+        <ProductModal
+          open={modalOuverte}
+          onClose={() => {
+            setModalOuverte(false);
+            setProduitSelectionne(null);
+          }}
+          produit={produitSelectionne}
+        />
+      )}
     </>
   );
 }
