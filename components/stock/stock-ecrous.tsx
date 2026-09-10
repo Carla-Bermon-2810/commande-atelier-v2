@@ -628,7 +628,7 @@ export default function StockEcrous() {
           className="flex items-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13]"
         >
           <Plus size={20} />
-          Réceptionner
+          Ajouter une référence
         </button>
       </div>
 

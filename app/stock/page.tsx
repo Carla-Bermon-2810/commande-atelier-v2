@@ -34,6 +34,12 @@ const categories = [
     description: "Écrous et éléments associés",
     image: "ecrou.webp",
   },
+  {
+    href: "/stock/outillage",
+    title: "Outillage",
+    description: "Forets, fraises et tarauds",
+    image: "outillage.jpg",
+  },
 ];
 
 export default function StockPage() {
