@@ -17,28 +17,16 @@ const categories = [
     image: "tige filete.webp",
   },
   {
-    href: "/stock/inserts",
-    title: "Inserts",
-    description: "Inserts et éléments de fixation",
-    image: "insert.webp",
-  },
-  {
-    href: "/stock/vis",
-    title: "Vis",
-    description: "Visserie de l'atelier",
-    image: "vis.jpg",
-  },
-  {
-    href: "/stock/ecrous",
-    title: "Écrous",
-    description: "Écrous et éléments associés",
-    image: "ecrou.webp",
+    href: "/stock/fixations",
+    title: "Fixations",
+    description: "Vis, écrous et inserts",
+    image: "fixation.png",
   },
   {
     href: "/stock/outillage",
     title: "Outillage",
     description: "Forets, fraises et tarauds",
-    image: "outillage.jpg",
+    image: "outillage.png",
   },
 ];
 
