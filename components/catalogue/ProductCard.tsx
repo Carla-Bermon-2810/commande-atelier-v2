@@ -27,7 +27,7 @@ export default function ProductCard({ produit }: Props) {
         aria-haspopup="dialog"
         aria-label={`Voir les variantes de ${produit.produit}`}
       >
-        <div className="relative flex h-60 items-center justify-center border-b border-slate-100 bg-[#F8F9FA] p-4 sm:h-64">
+        <div className="relative flex h-48 items-center justify-center border-b border-slate-100 bg-[#F8F9FA] p-4 sm:h-60 lg:h-64">
           {produit.photo ? (
             // Les photos de catalogue peuvent être hébergées sur Supabase ou une URL historique.
             // eslint-disable-next-line @next/next/no-img-element
@@ -37,7 +37,7 @@ export default function ProductCard({ produit }: Props) {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-5">
+        <div className="flex flex-1 flex-col p-4 sm:p-5">
           <h2 className="min-h-[48px] text-lg font-bold uppercase leading-snug text-[#2F3437]">{produit.produit}</h2>
           <div className="mt-3 border-t border-slate-100 pt-3">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.08em] text-slate-400">

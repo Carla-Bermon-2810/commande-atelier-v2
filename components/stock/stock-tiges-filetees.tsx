@@ -648,12 +648,12 @@ export default function StockTigesFiletees() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-8 pb-10">
+    <div className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
             <Package size={34} className="text-[#F95516]" />
-            <h1 className="text-3xl font-bold text-[#2F3437]">Stock tiges filetées</h1>
+            <h1 className="text-2xl font-bold text-[#2F3437] sm:text-3xl">Stock tiges filetées</h1>
           </div>
           <p className="mt-1 text-slate-500">Gestion des tiges filetées disponibles dans l'atelier</p>
         </div>

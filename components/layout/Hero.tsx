@@ -1,8 +1,6 @@
-import SearchBar from "../catalogue/SearchBar";
-
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[#F8F9FA] px-8 py-8">
+    <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-[#F8F9FA] px-4 py-6 sm:rounded-3xl sm:px-8 sm:py-8">
       {/* Décor */}
 
       <div className="absolute right-0 top-0 h-full w-80 overflow-hidden">
@@ -13,15 +11,15 @@ export default function Hero() {
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
 
-        <p className="mb-2 text-sm font-semibold uppercase tracking-[0.25em] text-[#F95516]">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F95516] sm:text-sm sm:tracking-[0.25em]">
           Catalogue interne
         </p>
 
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[#2F3437]">
+        <h1 className="text-2xl font-bold tracking-tight text-[#2F3437] sm:text-3xl md:text-4xl">
           COMMANDE ATELIER
         </h1>
 
-        <p className="mx-auto mt-2 max-w-3xl text-lg text-[#626B72]">
+        <p className="mx-auto mt-2 max-w-3xl text-base text-[#626B72] sm:text-lg">
           Retrouvez rapidement une référence, un produit ou une famille grâce au moteur de recherche.
         </p>
 

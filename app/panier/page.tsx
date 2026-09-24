@@ -85,7 +85,7 @@ export default function PanierPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#F95516]">Commande</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#2F3437] sm:text-4xl">Mon panier</h1>
+          <h1 className="mt-1 text-2xl font-bold text-[#2F3437] sm:text-4xl">Mon panier</h1>
           <p className="mt-2 text-slate-500">Vérifiez les quantités, puis envoyez votre demande à l’atelier.</p>
         </div>
 

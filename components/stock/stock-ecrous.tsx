@@ -625,11 +625,11 @@ export default function StockEcrous() {
   // ============================================================
 
   return (
-    <div className="mx-auto max-w-7xl p-8">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
 
       {/* EN-TÊTE */}
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
 
@@ -640,7 +640,7 @@ export default function StockEcrous() {
               className="text-[#F95516]"
             />
 
-            <h1 className="text-4xl font-bold text-[#2F3437]">
+            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
               Stock écrous
             </h1>
 
@@ -658,7 +658,7 @@ export default function StockEcrous() {
           onClick={() =>
             setModal("ajouter")
           }
-          className="flex items-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13]"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto"
         >
           <Plus size={20} />
           Ajouter une référence

@@ -34,10 +34,10 @@ export default function ProductModal({ open, onClose, produit }: Props) {
   const libelleVariante = variantLabel(variante);
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div onClick={(event) => event.stopPropagation()} className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="titre-produit">
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div onClick={(event) => event.stopPropagation()} className="max-h-[100dvh] w-full max-w-5xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl" role="dialog" aria-modal="true" aria-labelledby="titre-produit">
         <div className="grid grid-cols-1 lg:grid-cols-[42%_58%]">
-          <div className="flex min-h-64 items-center justify-center bg-gradient-to-br from-slate-50 to-white p-8 lg:min-h-[500px]">
+          <div className="flex min-h-48 items-center justify-center bg-gradient-to-br from-slate-50 to-white p-5 sm:min-h-64 sm:p-8 lg:min-h-[500px]">
             {produit.photo ? (
               // Les photos de catalogue viennent de chemins Supabase historiques.
               // eslint-disable-next-line @next/next/no-img-element
@@ -45,11 +45,11 @@ export default function ProductModal({ open, onClose, produit }: Props) {
             ) : <ImageOff size={90} className="text-slate-300" />}
           </div>
 
-          <div className="relative flex flex-col p-6 sm:p-10">
+          <div className="relative flex flex-col p-5 sm:p-10">
             <button type="button" onClick={onClose} className="absolute right-5 top-5 flex min-h-12 min-w-12 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#F95516]" aria-label="Fermer la fiche produit"><X /></button>
             <div className="pr-12">
               <p className="text-sm font-semibold uppercase tracking-wide text-[#F95516]">{produit.famille}</p>
-              <h2 id="titre-produit" className="mt-2 text-3xl font-bold text-[#2F3437]">{produit.produit}</h2>
+              <h2 id="titre-produit" className="mt-2 text-2xl font-bold text-[#2F3437] sm:text-3xl">{produit.produit}</h2>
               <p className="mt-2 text-slate-500">Choisissez la variante à commander.</p>
             </div>
 

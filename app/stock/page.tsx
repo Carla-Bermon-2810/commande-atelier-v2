@@ -38,7 +38,7 @@ const categories = [
 export default function StockPage() {
   return (
     <AppLayout>
-      <main className="w-full px-6 py-6 lg:px-8">
+      <main className="w-full px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <section className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -69,7 +69,7 @@ export default function StockPage() {
               className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-orange-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
             >
               {/* Photo */}
-              <div className="relative h-72 overflow-hidden bg-slate-100">
+              <div className="relative h-52 overflow-hidden bg-slate-100 sm:h-64 lg:h-72">
                 <Image
                   src={category.image}
                   alt={category.title}
@@ -79,7 +79,7 @@ export default function StockPage() {
                 />
               </div>
 
-              <div className="p-6">
+              <div className="p-5 sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#F95516]">Gestion stock</p>
                 <div>
                   <h2 className="mt-2 text-2xl font-bold text-[#2F3437]">

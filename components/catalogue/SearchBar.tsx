@@ -13,9 +13,9 @@ export default function SearchBar({
 }: SearchBarProps) {
   return (
     <div className="mx-auto mt-6 w-full max-w-4xl">
-      <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/40 transition-all duration-300 focus-within:border-[#F95516] focus-within:ring-2 focus-within:ring-[#F95516]/20">
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-lg shadow-slate-200/40 transition-all duration-300 focus-within:border-[#F95516] focus-within:ring-2 focus-within:ring-[#F95516]/20 sm:gap-4 sm:p-3">
 
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F95516]/10">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F95516]/10 sm:h-14 sm:w-14 sm:rounded-2xl">
           <Search
             className="h-6 w-6 text-[#F95516]"
             strokeWidth={2.2}
@@ -27,7 +27,7 @@ export default function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Rechercher un produit, une famille, un grain ou une dimension..."
-          className="flex-1 bg-transparent text-lg text-[#2F3437] outline-none placeholder:text-slate-400"
+          className="min-w-0 flex-1 bg-transparent text-base text-[#2F3437] outline-none placeholder:text-slate-400 sm:text-lg"
         />
 
       </div>

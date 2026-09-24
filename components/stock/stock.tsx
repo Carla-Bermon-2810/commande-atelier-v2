@@ -550,18 +550,18 @@ export default function Stock({ matiere }: StockProps) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <Package size={32} className="text-[#F95516]" />
-            <h1 className="text-4xl font-bold text-[#2F3437]">
+            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
               {matiere ? `Tubes — ${nomMatiere(matiere)}` : "Stock tubes"}
             </h1>
           </div>
           <p className="mt-2 text-slate-500">Gestion des tubes disponibles dans l&apos;atelier</p>
         </div>
-        <button type="button" onClick={ouvrirReception} className="flex items-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13]">
+        <button type="button" onClick={ouvrirReception} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto">
           <Plus size={20} /> Réceptionner un tube
         </button>
       </div>

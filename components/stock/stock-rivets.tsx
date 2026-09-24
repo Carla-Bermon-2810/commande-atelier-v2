@@ -217,7 +217,7 @@ export default function StockRivets() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pb-10 lg:px-8">
+    <main className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3"><Package className="text-[#F95516]" size={32} /><h1 className="text-3xl font-bold text-[#2F3437]">Stock rivets</h1></div>

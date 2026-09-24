@@ -39,14 +39,14 @@ export default function CategoryCard({
   return (
     <div className="h-full">
       <Link href={href} className="block h-full">
-        <div className="group relative flex h-full min-h-48 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(30,41,59,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-[0_14px_28px_rgba(30,41,59,0.10)]">
+        <div className="group relative flex h-full min-h-40 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(30,41,59,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-[0_14px_28px_rgba(30,41,59,0.10)] sm:min-h-48 sm:p-5">
 
           {/* Barre orange */}
           <div className="absolute left-0 top-0 h-full w-0.5 bg-[#F95516] opacity-0 transition-all duration-300 group-hover:opacity-100" />
 
           <div className="flex items-center justify-between">
 
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-[#F95516] transition-colors duration-200 group-hover:bg-[#F95516] group-hover:text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-[#F95516] transition-colors duration-200 group-hover:bg-[#F95516] group-hover:text-white sm:h-14 sm:w-14">
               <Icon size={26} strokeWidth={2} />
             </div>
 
@@ -57,7 +57,7 @@ export default function CategoryCard({
 
           </div>
 
-          <div className="mt-5 flex-1">
+          <div className="mt-4 flex-1 sm:mt-5">
 
             <h3 className="text-lg font-bold uppercase tracking-[.06em] text-[#2F3437]">
               {title}
