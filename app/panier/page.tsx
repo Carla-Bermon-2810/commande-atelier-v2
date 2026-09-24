@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Loader2, PackagePlus, Send, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useCart } from "@/context/cart-context";
@@ -82,11 +83,11 @@ export default function PanierPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#F95516]">Commande</p>
-          <h1 className="mt-1 text-2xl font-bold text-[#2F3437] sm:text-4xl">Mon panier</h1>
-          <p className="mt-2 text-slate-500">Vérifiez les quantités, puis envoyez votre demande à l’atelier.</p>
+      <div className="mx-auto max-w-6xl py-4">
+        <div className="relative mb-5 overflow-hidden rounded-xl bg-[#142026] p-6 text-white sm:p-8" style={{ backgroundImage: "linear-gradient(90deg, rgba(10,20,26,.96), rgba(10,20,26,.72), rgba(10,20,26,.36)), url('/category-soudure-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Commande Atelier</p>
+          <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">Votre panier</h1>
+          <p className="mt-1 text-sm text-slate-200">{cart.length} article{cart.length > 1 ? "s" : ""} · Vérifiez les quantités avant l’envoi.</p>
         </div>
 
         {feedback && (
@@ -103,7 +104,7 @@ export default function PanierPage() {
           </div>
         )}
 
-        <section className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 sm:p-5" aria-labelledby="hors-catalogue-title">
+        <section className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4 sm:p-5" aria-labelledby="hors-catalogue-title">
           <div className="flex gap-3">
             <PackagePlus className="mt-0.5 shrink-0 text-[#F95516]" size={22} aria-hidden="true" />
             <div className="min-w-0 flex-1">
@@ -136,18 +137,26 @@ export default function PanierPage() {
           </div>
         </section>
 
-        {cart.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
+        {feedback?.type === "success" && cart.length === 0 ? (
+          <section className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 size={34} /></span>
+            <h2 className="mt-4 text-2xl font-bold">Demande envoyée !</h2>
+            <p className="mt-2 text-sm text-slate-600">{feedback.message}</p>
+            <Link href="/" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-[#F95516] px-5 text-sm font-bold text-white hover:bg-[#e04d13]">Retour au catalogue</Link>
+          </section>
+        ) : cart.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
             <p className="text-xl font-bold text-[#2F3437]">Votre panier est vide.</p>
             <p className="mt-2 text-slate-500">Ajoutez des articles depuis le catalogue pour créer une commande.</p>
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-4">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">Produits de votre demande</div>
               {cart.map((article) => <CartItem key={article.article} article={article} />)}
             </div>
 
-            <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-28 sm:p-6">
+            <aside className="h-fit rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 sm:p-6">
               <h2 className="text-xl font-bold text-[#2F3437]">Informations de la commande</h2>
               <p className="mt-1 text-sm text-slate-500">Les champs marqués d’un astérisque sont obligatoires.</p>
 

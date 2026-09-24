@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, FolderOpen, ArrowLeft, PackageSearch } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, FolderOpen, ArrowLeft, PackageSearch, ImageOff } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { categoryImage } from "@/lib/category-visuals";
 import { supabase } from "@/lib/supabase";
 
 interface PageProps {
@@ -47,17 +49,21 @@ export default async function CategoriePage({ params }: PageProps) {
   // Catalogue
   const { data: catalogue, count: nbReferences } = await supabase
     .from("catalogue")
-    .select("famille", {
+    .select("famille, photo", {
       count: "exact",
     })
     .ilike("categorie", categorie.nom);
 
   // Nombre de références par famille
   const compteurFamille: Record<string, number> = {};
+  const photosFamille: Record<string, string> = {};
 
   catalogue?.forEach((article) => {
     compteurFamille[article.famille] =
       (compteurFamille[article.famille] || 0) + 1;
+    if (article.photo && !photosFamille[article.famille]) {
+      photosFamille[article.famille] = supabase.storage.from("photos").getPublicUrl(article.photo).data.publicUrl;
+    }
   });
 
   return (
@@ -73,29 +79,22 @@ export default async function CategoriePage({ params }: PageProps) {
         </Link>
       </div>
 
-        <section className="mb-7 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Catalogue · {categorie.nom}</p>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-[#F95516]"><Boxes size={27} /></div>
-                <div>
-                  <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">{categorie.nom}</h1>
-                  <p className="mt-1 text-slate-500">Choisissez une famille, puis sélectionnez la référence adaptée.</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm font-semibold text-slate-600">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2"><FolderOpen size={17} className="text-[#F95516]" />{familles?.length ?? 0} familles</span>
-              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"><PackageSearch size={17} className="text-[#F95516]" />{nbReferences ?? 0} références</span>
+        <section className="relative mb-6 overflow-hidden rounded-xl bg-[#142026] text-white">
+          <Image src={categoryImage(categorie.nom)} alt="" fill sizes="(min-width: 1024px) 85vw, 100vw" className="object-cover object-center" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,22,28,.97),rgba(12,22,28,.75)_48%,rgba(12,22,28,.12))]" />
+          <div className="relative flex min-h-48 flex-col justify-center p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Catalogue · {categorie.nom}</p>
+            <h1 className="mt-2 text-3xl font-black uppercase text-white sm:text-4xl">{categorie.nom}</h1>
+            <p className="mt-2 text-sm text-slate-200">Choisissez une famille pour voir ses produits.</p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2"><FolderOpen size={15} />{familles?.length ?? 0} familles</span>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2"><PackageSearch size={15} />{nbReferences ?? 0} références</span>
             </div>
           </div>
-          <p className="border-t border-slate-100 bg-slate-50 px-6 py-3 text-sm text-slate-600 sm:px-8">Les variantes de format, diamètre ou grain se choisissent dans la fiche produit.</p>
         </section>
 
-        {/* Cartes */}
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Familles</h2><span className="text-sm text-slate-500">{familles?.length ?? 0} familles</span></div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
           {familles?.map((famille) => (
 
@@ -104,33 +103,22 @@ export default async function CategoriePage({ params }: PageProps) {
               href={`/categorie/${slug}/${encodeURIComponent(
                 famille.famille
               )}`}
-              className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
+              className="group flex min-h-44 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#F95516] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
             >
-
-                <div className="mb-6 flex items-start justify-between">
-
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-[#F95516] transition group-hover:bg-[#F95516] group-hover:text-white">
-                  <FolderOpen size={28} />
-                </div>
-
-                <ArrowRight className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#F95516]" />
-
-                </div>
-
-                <h2 className="text-xl font-semibold text-slate-800">
-                  {famille.famille}
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
+              <div className="flex h-28 items-center justify-center border-b border-slate-100 bg-[#F8F9FA] p-3">
+                {photosFamille[famille.famille] ? (
+                  // Les photos réelles proviennent du catalogue Supabase.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photosFamille[famille.famille]} alt="" className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105" />
+                ) : <ImageOff size={35} className="text-slate-300" />}
+              </div>
+              <div className="flex flex-1 items-end justify-between gap-3 p-4">
+                <div><h3 className="font-bold text-[#17232b]">{famille.famille}</h3><p className="mt-1 text-xs text-slate-500">
                   {compteurFamille[famille.famille] ?? 0} référence
                   {(compteurFamille[famille.famille] ?? 0) > 1 ? "s" : ""}
-                </p>
-
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-bold text-[#F95516]">
-                  Voir les références
-                  <span className="rounded-lg bg-orange-50 px-2 py-1 group-hover:bg-[#F95516] group-hover:text-white">→</span>
-                </div>
-
+                </p></div>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F95516] text-white group-hover:translate-x-0.5"><ArrowRight size={18} /></span>
+              </div>
             </Link>
 
           ))}

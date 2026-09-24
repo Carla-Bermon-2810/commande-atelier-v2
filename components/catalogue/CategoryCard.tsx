@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { categoryImage } from "@/lib/category-visuals";
 import {
   ArrowRight,
   Disc3,
@@ -11,15 +12,6 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-
-const categoryImages: Record<string, string> = {
-  abrasif: "/category-abrasif-v1.png",
-  "outils de coupe": "/category-outils-coupe-v1.png",
-  "poste soudure": "/category-soudure-v1.png",
-  consommable: "/category-consommable-v1.png",
-  quincaillerie: "/category-quincaillerie-v1.png",
-  epi: "/category-epi-v1.png",
-};
 
 const icons = {
   abrasif: Disc3,
@@ -45,7 +37,7 @@ export default function CategoryCard({
 }: Props) {
   const Icon =
     icons[icon.toLowerCase() as keyof typeof icons] ?? Package;
-  const image = categoryImages[icon.toLowerCase()] ?? "/hero-atelier-v3.png";
+  const image = categoryImage(icon);
 
   return (
     <div className="h-full">

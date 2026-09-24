@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import Navbar from "@/components/layout/Navbar";
+import AppLayout from "@/components/layout/AppLayout";
 import ProductDetails from "@/components/catalogue/ProductDetails";
 
 interface Props {
@@ -22,36 +22,35 @@ export default async function ProduitPage({ params }: Props) {
     console.error(error);
 
     return (
-      <main className="min-h-screen bg-gray-100">
-        <Navbar />
-
-        <div className="p-8">
+      <AppLayout>
+        <div className="p-6">
           <h1 className="text-xl font-bold">
             Erreur de chargement
           </h1>
         </div>
-      </main>
+      </AppLayout>
     );
   }
 
   if (!variantes || variantes.length === 0) {
     return (
-      <main className="min-h-screen bg-gray-100">
-        <Navbar />
-
-        <div className="p-8">
+      <AppLayout>
+        <div className="p-6">
           <h1 className="text-xl font-bold">
             Produit introuvable
           </h1>
         </div>
-      </main>
+      </AppLayout>
     );
   }
 
   // On récupère la première variante avec une photo
   const varianteAvecPhoto = variantes.find((v) => v.photo);
 
-  const photo = varianteAvecPhoto?.photo ?? null;
+  const cheminPhoto = varianteAvecPhoto?.photo ?? null;
+  const photo = cheminPhoto
+    ? cheminPhoto.startsWith("http") ? cheminPhoto : supabase.storage.from("photos").getPublicUrl(cheminPhoto).data.publicUrl
+    : null;
 
   // Toutes les variantes de grain disponibles
   const grains = Array.from(
@@ -71,12 +70,10 @@ export default async function ProduitPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <Navbar />
-
-      <div className="mx-auto max-w-7xl p-8">
+    <AppLayout>
+      <div className="mx-auto max-w-7xl py-4">
       <ProductDetails produit={produitDetails} />
       </div>
-    </main>
+    </AppLayout>
   );
 }

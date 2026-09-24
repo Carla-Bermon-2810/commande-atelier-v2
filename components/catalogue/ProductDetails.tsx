@@ -33,11 +33,11 @@ export default function ProductDetails({ produit }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-xl">
-      <div className="grid grid-cols-1 lg:grid-cols-[42%_58%]">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-[50%_50%]">
 
         {/* PHOTO */}
-        <div className="flex min-h-[500px] items-center justify-center bg-gradient-to-br from-slate-50 to-white p-12">
+        <div className="flex min-h-64 items-center justify-center border-b border-slate-100 bg-[#F8F9FA] p-6 lg:min-h-[500px] lg:border-b-0 lg:border-r lg:p-10">
           {produit.photo ? (
             <img
               src={produit.photo}
@@ -53,9 +53,9 @@ export default function ProductDetails({ produit }: Props) {
         </div>
 
         {/* INFORMATIONS */}
-        <div className="p-10">
+        <div className="p-5 sm:p-8">
 
-          <h1 className="text-3xl font-bold text-[#2F3437]">
+          <h1 className="text-2xl font-bold text-[#17232b] sm:text-3xl">
             {produit.produit}
           </h1>
 
@@ -85,7 +85,7 @@ export default function ProductDetails({ produit }: Props) {
                     onClick={() => setGrainSelectionne(grain)}
                     className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
                       grainSelectionne === grain
-                        ? "border-[#F95516] bg-[#F95516] text-white shadow-sm"
+                        ? "border-[#F95516] bg-orange-50 text-[#F95516] shadow-sm"
                         : "border-slate-200 bg-white shadow-sm hover:border-[#F95516]"
                     }`}
                   >

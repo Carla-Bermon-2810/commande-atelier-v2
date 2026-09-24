@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, Boxes, Layers } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Layers } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { categoryImage } from "@/lib/category-visuals";
 import FamilyProductGrid from "@/components/catalogue/FamilyProductGrid";
 import { variantsUniques } from "@/components/catalogue/product-variants";
 import { supabase } from "@/lib/supabase";
@@ -101,21 +103,15 @@ const produits = Array.from(groupes.values()).map((produit) => ({
                 </Link>
             </div>
 
-        <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 sm:p-8 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Catalogue · {categorie.nom}</p>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-[#F95516]"><Boxes size={27} /></div>
-                <div>
-                  <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">{familleNom}</h1>
-                  <p className="mt-1 text-slate-500">Choisissez une variante, puis ajoutez-la au panier.</p>
-                </div>
-              </div>
-            </div>
-            <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"><Layers size={17} className="text-[#F95516]" />{produits.length} produit{produits.length > 1 ? "s" : ""}</span>
+        <section className="relative mb-5 overflow-hidden rounded-xl bg-[#142026] text-white">
+          <Image src={categoryImage(categorie.nom)} alt="" fill sizes="(min-width: 1024px) 85vw, 100vw" className="object-cover" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,22,28,.97),rgba(12,22,28,.72)_55%,rgba(12,22,28,.1))]" />
+          <div className="relative flex min-h-44 flex-col justify-center p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Catalogue › {categorie.nom}</p>
+            <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">{familleNom}</h1>
+            <p className="mt-2 text-sm text-slate-200">Choisissez la variante adaptée dans chaque fiche produit.</p>
+            <span className="mt-4 inline-flex w-fit items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"><Layers size={15} />{produits.length} produit{produits.length > 1 ? "s" : ""}</span>
           </div>
-          <p className="border-t border-slate-100 bg-slate-50 px-6 py-3 text-sm text-slate-600 sm:px-8">Une carte correspond à un produit ; ses dimensions et grains sont regroupés dans une seule fiche.</p>
         </section>
 
         <FamilyProductGrid produits={produits} />

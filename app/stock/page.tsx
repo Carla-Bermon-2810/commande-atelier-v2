@@ -39,25 +39,24 @@ export default function StockPage() {
   return (
     <AppLayout>
       <main className="w-full px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <section className="mb-6 overflow-hidden rounded-2xl border border-slate-800 bg-[linear-gradient(110deg,#101a20,#24333b)] text-white shadow-sm">
-          <div className="flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+        <section className="mb-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-5 p-5 sm:p-7 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Espace de travail</p>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F95516]/20 text-[#ff8d5c]"><Boxes size={27} /></div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Espace de travail</p>
+              <div className="mt-2 flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-orange-50 text-[#F95516]"><Boxes size={25} /></div>
                 <div>
-                  <h1 className="text-3xl font-bold text-white sm:text-4xl">Stock atelier</h1>
-                  <p className="mt-1 text-slate-200">Ouvrez une famille pour consulter, ajuster ou compléter son stock.</p>
+                  <h1 className="text-2xl font-bold sm:text-3xl">Stock atelier</h1>
+                  <p className="mt-1 text-sm text-slate-500">Consultez les quantités disponibles par famille.</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 text-sm font-medium text-slate-100">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2"><Package size={17} className="text-[#ff8d5c]" />4 familles de suivi</span>
-              <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-3 py-2"><ScanSearch size={17} className="text-[#ff8d5c]" />Recherche dans chaque famille</span>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+              <span className="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><Package size={16} className="text-[#F95516]" />4 familles de suivi</span>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><ScanSearch size={16} className="text-[#F95516]" />Recherche par famille</span>
             </div>
           </div>
-          <div className="border-t border-white/10 bg-black/10 px-6 py-3 text-sm text-slate-200 sm:px-8">Conseil opérateur : choisissez d’abord la famille, puis filtrez par matière, dimension ou référence.</div>
         </section>
 
         {/* Cartes */}
@@ -66,7 +65,7 @@ export default function StockPage() {
             <Link
               key={category.href}
               href={category.href}
-              className="group relative min-h-[18rem] overflow-hidden rounded-xl border border-slate-200 bg-[#132128] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
+              className="group relative min-h-[16rem] overflow-hidden rounded-xl border border-slate-200 bg-[#132128] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
             >
               <div className="absolute inset-0 overflow-hidden bg-slate-100">
                 <Image
@@ -79,7 +78,7 @@ export default function StockPage() {
               </div>
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,25,31,.04)_30%,rgba(10,18,23,.96)_100%)]" />
 
-              <div className="relative flex min-h-[18rem] flex-col justify-end p-5 sm:p-6">
+              <div className="relative flex min-h-[16rem] flex-col justify-end p-5 sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#ff8d5c]">Gestion stock</p>
                 <div>
                   <h2 className="mt-2 text-2xl font-bold text-white">

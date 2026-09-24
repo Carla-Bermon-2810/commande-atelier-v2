@@ -120,16 +120,16 @@ export default function Header() {
       </aside>
 
       <header className="sticky top-0 z-40 mx-auto mb-4 max-w-[1600px] px-0 sm:mb-6 lg:mb-0 lg:max-w-none">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:h-[5rem] lg:gap-7 lg:px-9 lg:py-0">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#142026] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#142026] text-lg font-black tracking-[-0.12em] text-white sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
             D<span className="text-[#F95516]">L</span>
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold text-[#121820] sm:text-2xl">
+            <h1 className="truncate text-base font-bold text-white sm:text-2xl lg:text-[#121820]">
               Commande Atelier
             </h1>
-            <p className="hidden text-sm text-[#626B72] sm:block">
+            <p className="hidden text-sm text-slate-300 sm:block lg:text-[#626B72]">
               Catalogue interne
             </p>
           </div>
@@ -173,6 +173,11 @@ export default function Header() {
         </div>
 
       </div>
+      <form onSubmit={submitGlobalSearch} className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
+        <Search size={18} className="shrink-0 text-[#142026]" aria-hidden="true" />
+        <input type="search" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Rechercher un produit ou une référence..." aria-label="Rechercher dans le catalogue" className="min-h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+        <button type="submit" className="rounded-md bg-[#F95516] px-3 py-2 text-xs font-semibold text-white">Chercher</button>
+      </form>
       </header>
       <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
         {[

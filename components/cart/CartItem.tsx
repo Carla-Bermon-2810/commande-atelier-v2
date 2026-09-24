@@ -30,9 +30,9 @@ export default function CartItem({ article }: Props) {
   }
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-5 p-5 sm:p-6 md:flex-row md:items-center">
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-[#F8F9FA] sm:h-28 sm:w-28">
+    <article className="border-b border-slate-100 bg-white last:border-b-0">
+      <div className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap sm:gap-4 sm:p-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#F8F9FA] sm:h-16 sm:w-16">
           {article.photo && !imageIndisponible ? (
             // Les photos peuvent provenir de Supabase ou d'une URL historique,
             // sans domaine fixe configuré pour next/image.
@@ -41,25 +41,25 @@ export default function CartItem({ article }: Props) {
               src={article.photo}
               alt=""
               onError={() => setImageIndisponible(true)}
-              className="max-h-24 max-w-full object-contain p-2"
+              className="max-h-14 max-w-full object-contain p-1 sm:max-h-16"
             />
           ) : (
-            <ImageOff className="text-slate-300" size={42} aria-label="Image indisponible" />
+            <ImageOff className="text-slate-300" size={26} aria-label="Image indisponible" />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold uppercase text-[#2F3437]">{article.article}</h2>
-          <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm text-[#626B72]">{article.famille}</p>
+          <h2 className="text-sm font-bold text-[#17232b] sm:text-base">{article.article}</h2>
+          <p className="mt-1 text-xs text-slate-500">{article.famille}</p>
         </div>
 
-        <div className="w-full rounded-2xl bg-slate-50 p-4 md:w-auto">
-          <label htmlFor={`quantite-${article.article}`} className="mb-2 block text-sm font-semibold uppercase tracking-wide text-slate-600">Quantité</label>
-          <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 sm:ml-0">
+          <label htmlFor={`quantite-${article.article}`} className="sr-only">Quantité</label>
+          <div className="flex items-center rounded-lg border border-slate-200">
             <button
               type="button"
               onClick={() => decreaseQuantity(article.article)}
-              className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 hover:border-[#F95516] hover:text-[#F95516]"
+              className="flex min-h-10 min-w-10 items-center justify-center rounded-l-lg bg-white text-slate-700 hover:text-[#F95516]"
               aria-label={`Retirer une unité de ${article.article}`}
             >
               <Minus size={20} />
@@ -72,13 +72,13 @@ export default function CartItem({ article }: Props) {
               max={MAX_QUANTITE}
               value={article.quantite}
               onChange={(event) => changerQuantite(event.target.value)}
-              className="min-h-12 w-20 rounded-xl border border-slate-300 bg-white px-2 text-center text-base font-bold text-[#2F3437] focus:border-[#F95516] focus:outline-none focus:ring-2 focus:ring-orange-100"
+              className="min-h-10 w-12 border-x border-slate-200 bg-white px-1 text-center text-sm font-bold text-[#2F3437] focus:outline-none"
             />
             <button
               type="button"
               onClick={() => increaseQuantity(article.article)}
               disabled={article.quantite >= MAX_QUANTITE}
-              className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 hover:border-[#F95516] hover:text-[#F95516] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex min-h-10 min-w-10 items-center justify-center rounded-r-lg bg-white text-slate-700 hover:text-[#F95516] disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={`Ajouter une unité à ${article.article}`}
             >
               <Plus size={20} />
@@ -89,7 +89,7 @@ export default function CartItem({ article }: Props) {
         <button
           type="button"
           onClick={() => removeFromCart(article.article)}
-          className="flex min-h-12 min-w-12 items-center justify-center self-end rounded-xl border border-red-200 text-red-600 hover:bg-red-50 md:self-auto"
+          className="flex min-h-10 min-w-10 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
           aria-label={`Retirer ${article.article} du panier`}
         >
           <Trash2 size={20} />

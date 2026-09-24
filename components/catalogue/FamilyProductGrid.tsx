@@ -28,7 +28,7 @@ export default function FamilyProductGrid({ produits }: { produits: FamilyProduc
 
   return (
     <>
-      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="mb-5 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
         <label htmlFor="recherche-produit" className="sr-only">Rechercher un produit dans cette famille</label>
         <div className="flex items-center gap-3">
           <Search className="shrink-0 text-slate-400" size={20} aria-hidden="true" />
@@ -38,7 +38,7 @@ export default function FamilyProductGrid({ produits }: { produits: FamilyProduc
             value={recherche}
             onChange={(event) => setRecherche(event.target.value)}
             placeholder="Rechercher un produit, un diamètre, une dimension ou un grain…"
-            className="min-h-12 w-full bg-transparent text-base text-[#2F3437] outline-none placeholder:text-slate-400"
+            className="min-h-11 w-full bg-transparent text-sm text-[#2F3437] outline-none placeholder:text-slate-400 sm:text-base"
           />
           {recherche && (
             <button
@@ -56,7 +56,7 @@ export default function FamilyProductGrid({ produits }: { produits: FamilyProduc
       {recherche && <p className="mb-4 text-sm font-medium text-slate-500">{produitsFiltres.length} résultat{produitsFiltres.length > 1 ? "s" : ""}</p>}
 
       {produitsFiltres.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {produitsFiltres.map((produit) => <ProductCard key={produit.produit} produit={produit} />)}
         </div>
       ) : (
