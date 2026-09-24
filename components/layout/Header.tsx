@@ -11,6 +11,7 @@ import {
   Settings,
   Package,
   ShieldCheck,
+  ShoppingCart,
 } from "lucide-react";
 
 import CartButton from "@/components/panier/CartButton";
@@ -53,8 +54,8 @@ export default function Header() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#111b20] text-white lg:flex">
-        <Link href="/" className="flex min-h-[6.15rem] items-center justify-center border-b border-white/10 px-5">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#142026] text-white lg:flex">
+        <Link href="/" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-5">
           <div className="text-center">
             <div className="text-[2.55rem] font-black leading-none tracking-[-0.16em] text-white">D<span className="text-[#f15a24]">L</span></div>
             <p className="mt-1 text-[8px] font-bold tracking-[0.18em] text-slate-200">DÉCOUPE LASER</p>
@@ -72,7 +73,7 @@ export default function Header() {
                 href={item.href}
                 className={`flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
                   active
-                    ? "bg-[#f15a24] text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
+                    ? "bg-[#F95516] text-white shadow-[0_8px_20px_rgba(249,85,22,0.18)]"
                     : "text-slate-300 hover:bg-white/8 hover:text-white"
                 }`}
               >
@@ -86,7 +87,7 @@ export default function Header() {
             href="/panier"
             className={`relative flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
               isActive("/panier")
-                ? "bg-[#24596c] text-white"
+                ? "bg-[#F95516] text-white"
                 : "text-slate-300 hover:bg-white/8 hover:text-white"
             }`}
           >
@@ -99,7 +100,7 @@ export default function Header() {
               href="/admin"
               className={`mt-1 flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
                 isActive("/admin")
-                  ? "bg-[#24596c] text-white"
+                ? "bg-[#F95516] text-white"
                   : "text-slate-300 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -118,11 +119,11 @@ export default function Header() {
         </div>
       </aside>
 
-      <header className="sticky top-2 z-40 mx-auto mb-4 max-w-[1600px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:top-0 lg:mb-0 lg:max-w-none lg:px-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:h-[6.15rem] lg:flex-nowrap lg:gap-7 lg:rounded-none lg:border-0 lg:px-9 lg:py-0 lg:shadow-none">
+      <header className="sticky top-0 z-40 mx-auto mb-4 max-w-[1600px] px-0 sm:mb-6 lg:mb-0 lg:max-w-none">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:h-[5rem] lg:gap-7 lg:px-9 lg:py-0">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
-            DL
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#142026] text-lg font-black tracking-[-0.12em] text-white sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
+            D<span className="text-[#F95516]">L</span>
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-[#121820] sm:text-2xl">
@@ -151,7 +152,7 @@ export default function Header() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            return <Link key={item.href} href={item.href} className={`flex h-[6.15rem] items-center gap-2 border-b-2 px-1 text-sm font-semibold ${active ? "border-[#f15a24] text-[#f15a24]" : "border-transparent text-slate-700 hover:text-[#1e4c5e]"}`}><Icon size={19} />{item.label}</Link>;
+            return <Link key={item.href} href={item.href} className={`flex h-[5rem] items-center gap-2 border-b-2 px-1 text-sm font-semibold ${active ? "border-[#F95516] text-[#F95516]" : "border-transparent text-slate-700 hover:text-[#F95516]"}`}><Icon size={19} />{item.label}</Link>;
           })}
         </nav>
 
@@ -161,39 +162,29 @@ export default function Header() {
             href="/admin"
             aria-label="Administration"
             title="Administration"
-            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[#1e4c5e] focus:ring-offset-2 ${
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2 ${
               isActive("/admin")
-                ? "border-[#c4d8de] bg-[#eaf1f3] text-[#1e4c5e]"
-                : "border-slate-200 bg-white text-slate-600 hover:border-[#c4d8de] hover:bg-[#eaf1f3] hover:text-[#1e4c5e]"
+                ? "border-orange-200 bg-orange-50 text-[#F95516]"
+                : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-[#F95516]"
             }`}
           >
             <Settings size={19} aria-hidden="true" />
           </Link>}
         </div>
 
-        <nav className="grid w-full grid-cols-2 gap-2 border-t border-slate-100 pt-3 lg:hidden">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-colors ${
-                  active
-                    ? "bg-[#eaf1f3] text-[#1e4c5e]"
-                    : "bg-slate-50 text-slate-600 active:bg-slate-100"
-                }`}
-              >
-                <Icon size={18} />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
       </div>
       </header>
+      <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
+        {[
+          { href: "/", label: "Accueil", icon: Home },
+          { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
+          { href: "/stock", label: "Stock", icon: Package },
+          { href: "/panier", label: "Panier", icon: ShoppingCart },
+        ].map(({ href, label, icon: Icon }) => {
+          const active = href === "/#catalogue" ? false : isActive(href);
+          return <Link key={label} href={href} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold ${active ? "text-[#F95516]" : "text-slate-600"}`}><Icon size={21} aria-hidden="true" />{label}{label === "Panier" && totalItems > 0 && <span className="absolute right-3 top-1 rounded-full bg-[#F95516] px-1.5 text-[10px] text-white">{totalItems}</span>}</Link>;
+        })}
+      </nav>
     </>
   );
 }

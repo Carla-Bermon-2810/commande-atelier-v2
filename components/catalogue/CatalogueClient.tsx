@@ -139,7 +139,7 @@ export default function CatalogueClient({
       {!search ? (
         <div
           id="catalogue"
-          className={`mt-8 grid gap-6 ${
+          className={`mt-5 grid gap-3 sm:gap-4 ${
             categories.length <= 4
               ? "grid-cols-1 sm:grid-cols-2"
               : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
