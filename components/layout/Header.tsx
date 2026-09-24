@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -54,12 +55,9 @@ export default function Header() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#142026] text-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#172025] text-white lg:flex">
         <Link href="/" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-5">
-          <div className="text-center">
-            <div className="text-[2.55rem] font-black leading-none tracking-[-0.16em] text-white">D<span className="text-[#f15a24]">L</span></div>
-            <p className="mt-1 text-[8px] font-bold tracking-[0.18em] text-slate-200">DÉCOUPE LASER</p>
-          </div>
+          <Image src="/dl-logo-atelier.png" alt="Découpe Laser" width={130} height={72} className="h-[4.25rem] w-auto object-contain" priority />
         </Link>
 
         <nav className="space-y-1 px-3 py-6" aria-label="Navigation principale">
@@ -120,11 +118,9 @@ export default function Header() {
       </aside>
 
       <header className="sticky top-0 z-40 mx-auto mb-4 max-w-[1600px] px-0 sm:mb-6 lg:mb-0 lg:max-w-none">
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#142026] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#172025] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#142026] text-lg font-black tracking-[-0.12em] text-white sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
-            D<span className="text-[#F95516]">L</span>
-          </div>
+          <Image src="/dl-logo-atelier.png" alt="Découpe Laser" width={73} height={41} className="h-10 w-[73px] shrink-0 object-contain lg:hidden" priority />
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-white sm:text-2xl lg:text-[#121820]">
               Commande Atelier
