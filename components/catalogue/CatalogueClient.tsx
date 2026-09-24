@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Hero from "@/components/layout/Hero";
 import SearchBar from "@/components/catalogue/SearchBar";
 import CategoryCard from "@/components/catalogue/CategoryCard";
@@ -51,7 +52,8 @@ export default function CatalogueClient({
   categories,
   catalogue,
 }: Props) {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [produitSelectionne, setProduitSelectionne] =
     useState<ProduitModal | null>(null);
   const [modalOuverte, setModalOuverte] = useState(false);
@@ -133,6 +135,7 @@ export default function CatalogueClient({
 
       {!search ? (
         <div
+          id="catalogue"
           className={`mt-8 grid gap-6 ${
             categories.length <= 4
               ? "grid-cols-1 sm:grid-cols-2"

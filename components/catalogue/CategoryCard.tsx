@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 
 const categoryImages: Record<string, string> = {
-  abrasif: "/outillage.png",
-  "outils de coupe": "/outillage.png",
-  "poste soudure": "/hero-atelier-v3.png",
-  consommable: "/fixation.png",
-  quincaillerie: "/fixation.png",
-  epi: "/c1191fa8-a254-4137-9389-c184c324db9c.png",
+  abrasif: "/category-abrasif-v1.png",
+  "outils de coupe": "/category-outils-coupe-v1.png",
+  "poste soudure": "/category-soudure-v1.png",
+  consommable: "/category-consommable-v1.png",
+  quincaillerie: "/category-quincaillerie-v1.png",
+  epi: "/category-epi-v1.png",
 };
 
 const icons = {

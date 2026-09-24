@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ClipboardList,
+  FolderOpen,
   Home,
+  Search,
   Settings,
   Package,
   ShieldCheck,
@@ -15,7 +17,9 @@ import CartButton from "@/components/panier/CartButton";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/access")
@@ -25,7 +29,13 @@ export default function Header() {
   }, [pathname]);
 
   const navItems = [
-    { href: "/", label: "Catalogue", icon: Home },
+    { href: "/", label: "Catalogue", icon: FolderOpen },
+    { href: "/stock", label: "Stock", icon: Package },
+  ];
+
+  const sidebarItems = [
+    { href: "/", label: "Accueil", icon: Home },
+    { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
   ];
 
@@ -33,6 +43,12 @@ export default function Header() {
     pathname === href ||
     (href !== "/" && href !== "/admin" && pathname.startsWith(href)) ||
     (href === "/admin" && pathname.startsWith("/admin"));
+
+  const submitGlobalSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = globalSearch.trim();
+    router.push(query ? `/?q=${encodeURIComponent(query)}` : "/");
+  };
 
   return (
     <>
@@ -48,7 +64,7 @@ export default function Header() {
         </Link>
 
         <nav className="space-y-1 px-4 py-7" aria-label="Navigation principale">
-          {navItems.map((item) => {
+          {sidebarItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
 
@@ -77,7 +93,7 @@ export default function Header() {
             }`}
           >
             <ClipboardList size={20} aria-hidden="true" />
-            Préparer une commande
+            Panier
           </Link>
           {isAdmin && (
             <Link
@@ -107,8 +123,8 @@ export default function Header() {
 
       <header className="sticky top-2 z-40 mx-auto mb-4 max-w-[1600px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:rounded-xl lg:px-6">
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl">
+        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
             DL
           </div>
           <div className="min-w-0">
@@ -116,10 +132,31 @@ export default function Header() {
               Commande Atelier
             </h1>
             <p className="hidden text-sm text-[#626B72] sm:block">
-              Découpe Laser • Catalogue interne
+              Catalogue interne
             </p>
           </div>
         </Link>
+
+        <form onSubmit={submitGlobalSearch} className="hidden max-w-xl flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm lg:flex">
+          <Search size={20} className="shrink-0 text-[#1e4c5e]" aria-hidden="true" />
+          <input
+            type="search"
+            value={globalSearch}
+            onChange={(event) => setGlobalSearch(event.target.value)}
+            placeholder="Rechercher un produit, une famille, une référence..."
+            className="min-w-0 flex-1 bg-transparent text-sm text-[#2F3437] outline-none placeholder:text-slate-400"
+            aria-label="Rechercher dans le catalogue"
+          />
+          <kbd className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-400">Entrée</kbd>
+        </form>
+
+        <nav className="hidden items-center gap-2 xl:flex">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return <Link key={item.href} href={item.href} className={`flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold ${active ? "border-[#f15a24] text-[#f15a24]" : "border-transparent text-slate-600 hover:text-[#1e4c5e]"}`}><Icon size={19} />{item.label}</Link>;
+          })}
+        </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <CartButton />
