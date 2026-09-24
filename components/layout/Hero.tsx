@@ -1,28 +1,30 @@
+import { Boxes, Layers3, ShoppingCart } from "lucide-react";
+
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-[#F8F9FA] px-4 py-6 sm:rounded-3xl sm:px-8 sm:py-8">
-      {/* Décor */}
-
-      <div className="absolute right-0 top-0 h-full w-80 overflow-hidden">
-        <div className="absolute right-8 top-6 h-32 w-32 rotate-45 rounded-3xl border border-slate-300 opacity-30"></div>
-        <div className="absolute right-28 top-32 h-20 w-20 rotate-45 rounded-2xl border border-slate-300 opacity-20"></div>
-        <div className="absolute right-2 bottom-8 h-40 w-40 rotate-45 rounded-[40px] border border-[#1e4c5e]/20"></div>
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-4xl text-center">
-
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#a55a36] sm:text-sm sm:tracking-[0.25em]">
+    <section className="relative min-h-[22rem] overflow-hidden rounded-2xl border border-slate-800 bg-[#10191e] sm:min-h-[25rem] sm:rounded-3xl">
+      <div
+        className="absolute inset-0 bg-cover bg-[center_right]"
+        style={{ backgroundImage: "url('/hero-atelier-v3.png')" }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,16,21,.97)_0%,rgba(10,22,29,.9)_40%,rgba(9,18,23,.32)_70%,rgba(9,18,23,.08)_100%)]" />
+      <div className="relative z-10 flex min-h-[22rem] max-w-3xl flex-col justify-center px-5 py-7 text-white sm:min-h-[25rem] sm:px-10 sm:py-10 lg:px-12">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[#d98257] sm:text-sm">
           Catalogue interne
         </p>
 
-        <h1 className="text-2xl font-bold tracking-tight text-[#2F3437] sm:text-3xl md:text-4xl">
-          COMMANDE ATELIER
+        <h1 className="max-w-xl text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+          Commande Atelier
         </h1>
 
-        <p className="mx-auto mt-2 max-w-3xl text-base text-[#626B72] sm:text-lg">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-200 sm:text-lg">
           Retrouvez rapidement une référence, un produit ou une famille grâce au moteur de recherche.
         </p>
-
+        <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-100 sm:mt-9">
+          <div className="flex items-center gap-2"><Boxes size={19} className="text-[#d98257]" /><span>Catalogue à jour</span></div>
+          <div className="flex items-center gap-2"><Layers3 size={19} className="text-[#d98257]" /><span>Stock suivi</span></div>
+          <div className="flex items-center gap-2"><ShoppingCart size={19} className="text-[#d98257]" /><span>Commande rapide</span></div>
+        </div>
       </div>
     </section>
   );

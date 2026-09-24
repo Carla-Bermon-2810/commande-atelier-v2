@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  FolderOpen,
+  ClipboardList,
+  Home,
   Settings,
   Package,
+  ShieldCheck,
 } from "lucide-react";
 
 import CartButton from "@/components/panier/CartButton";
@@ -23,7 +25,7 @@ export default function Header() {
   }, [pathname]);
 
   const navItems = [
-    { href: "/", label: "Catalogue", icon: FolderOpen },
+    { href: "/", label: "Catalogue", icon: Home },
     { href: "/stock", label: "Stock", icon: Package },
   ];
 
@@ -33,8 +35,78 @@ export default function Header() {
     (href === "/admin" && pathname.startsWith("/admin"));
 
   return (
-    <header className="sticky top-2 z-50 mx-auto mb-4 max-w-[1500px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:px-6">
+    <>
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[17.5rem] flex-col border-r border-white/10 bg-[#111b20] text-white lg:flex">
+        <Link href="/" className="flex min-h-28 items-center gap-3 border-b border-white/10 px-7">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#2f697d] to-[#173e4d] text-xl font-black tracking-tighter text-white shadow-lg">
+            DL
+          </div>
+          <div>
+            <p className="text-base font-bold tracking-tight">Commande Atelier</p>
+            <p className="mt-0.5 text-xs text-slate-400">Découpe Laser</p>
+          </div>
+        </Link>
+
+        <nav className="space-y-1 px-4 py-7" aria-label="Navigation principale">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+                  active
+                    ? "bg-[#24596c] text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
+                    : "text-slate-300 hover:bg-white/8 hover:text-white"
+                }`}
+              >
+                <Icon size={20} aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
+          <div className="my-5 border-t border-white/10" />
+          <Link
+            href="/panier"
+            className={`flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+              isActive("/panier")
+                ? "bg-[#24596c] text-white"
+                : "text-slate-300 hover:bg-white/8 hover:text-white"
+            }`}
+          >
+            <ClipboardList size={20} aria-hidden="true" />
+            Préparer une commande
+          </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={`mt-1 flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+                isActive("/admin")
+                  ? "bg-[#24596c] text-white"
+                  : "text-slate-300 hover:bg-white/8 hover:text-white"
+              }`}
+            >
+              <Settings size={20} aria-hidden="true" />
+              Administration
+            </Link>
+          )}
+        </nav>
+
+        <div className="mt-auto border-t border-white/10 p-6">
+          <div className="flex items-center gap-3 text-slate-400">
+            <ShieldCheck size={20} aria-hidden="true" />
+            <div>
+              <p className="text-xs font-semibold text-slate-300">Espace atelier</p>
+              <p className="mt-0.5 text-[11px]">Catalogue et stock partagés</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <header className="sticky top-2 z-40 mx-auto mb-4 max-w-[1600px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:rounded-xl lg:px-6">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl">
             DL
@@ -48,31 +120,6 @@ export default function Header() {
             </p>
           </div>
         </Link>
-
-        <nav className="hidden items-center gap-3 lg:flex">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 font-semibold transition-colors duration-200 ${
-                  active
-                    ? "bg-[#eaf1f3] text-[#1e4c5e] shadow-sm"
-                    : "text-[#626B72] hover:bg-slate-100 hover:text-[#1e4c5e]"
-                }`}
-              >
-                <Icon
-                  size={19}
-                  className="!text-[#1e4c5e] flex-shrink-0"
-                />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <CartButton />
@@ -112,6 +159,7 @@ export default function Header() {
           })}
         </nav>
       </div>
-    </header>
+      </header>
+    </>
   );
 }
