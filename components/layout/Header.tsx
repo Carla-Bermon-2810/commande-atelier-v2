@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 
 import CartButton from "@/components/panier/CartButton";
+import { useCart } from "@/context/cart-context";
 
 export default function Header() {
   const pathname = usePathname();
+  const { totalItems } = useCart();
   const [isAdmin, setIsAdmin] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
 
@@ -51,18 +53,15 @@ export default function Header() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[17.5rem] flex-col border-r border-white/10 bg-[#111b20] text-white lg:flex">
-        <Link href="/" className="flex min-h-28 items-center gap-3 border-b border-white/10 px-7">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#2f697d] to-[#173e4d] text-xl font-black tracking-tighter text-white shadow-lg">
-            DL
-          </div>
-          <div>
-            <p className="text-base font-bold tracking-tight">Commande Atelier</p>
-            <p className="mt-0.5 text-xs text-slate-400">Découpe Laser</p>
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#111b20] text-white lg:flex">
+        <Link href="/" className="flex min-h-[6.15rem] items-center justify-center border-b border-white/10 px-5">
+          <div className="text-center">
+            <div className="text-[2.55rem] font-black leading-none tracking-[-0.16em] text-white">D<span className="text-[#f15a24]">L</span></div>
+            <p className="mt-1 text-[8px] font-bold tracking-[0.18em] text-slate-200">DÉCOUPE LASER</p>
           </div>
         </Link>
 
-        <nav className="space-y-1 px-4 py-7" aria-label="Navigation principale">
+        <nav className="space-y-1 px-3 py-6" aria-label="Navigation principale">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -71,9 +70,9 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+                className={`flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
                   active
-                    ? "bg-[#24596c] text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
+                    ? "bg-[#f15a24] text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
                     : "text-slate-300 hover:bg-white/8 hover:text-white"
                 }`}
               >
@@ -82,10 +81,10 @@ export default function Header() {
               </Link>
             );
           })}
-          <div className="my-5 border-t border-white/10" />
+          <div className="my-4 border-t border-white/15" />
           <Link
             href="/panier"
-            className={`flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+            className={`relative flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
               isActive("/panier")
                 ? "bg-[#24596c] text-white"
                 : "text-slate-300 hover:bg-white/8 hover:text-white"
@@ -93,11 +92,12 @@ export default function Header() {
           >
             <ClipboardList size={20} aria-hidden="true" />
             Panier
+            {totalItems > 0 && <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f15a24] px-1 text-[11px] text-white">{totalItems}</span>}
           </Link>
           {isAdmin && (
             <Link
               href="/admin"
-              className={`mt-1 flex min-h-13 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
+              className={`mt-1 flex min-h-[3.35rem] items-center gap-3 rounded-lg px-4 text-sm font-semibold transition ${
                 isActive("/admin")
                   ? "bg-[#24596c] text-white"
                   : "text-slate-300 hover:bg-white/8 hover:text-white"
@@ -109,25 +109,23 @@ export default function Header() {
           )}
         </nav>
 
-        <div className="mt-auto border-t border-white/10 p-6">
-          <div className="flex items-center gap-3 text-slate-400">
-            <ShieldCheck size={20} aria-hidden="true" />
-            <div>
-              <p className="text-xs font-semibold text-slate-300">Espace atelier</p>
-              <p className="mt-0.5 text-[11px]">Catalogue et stock partagés</p>
-            </div>
+        <div className="mt-auto p-6">
+          <div className="text-slate-400">
+            <ShieldCheck size={21} aria-hidden="true" />
+            <p className="mt-3 text-xs font-semibold text-slate-200">Découpe Laser</p>
+            <p className="mt-1 text-[11px] leading-5">Catalogue interne<br />V2.0</p>
           </div>
         </div>
       </aside>
 
-      <header className="sticky top-2 z-40 mx-auto mb-4 max-w-[1600px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:rounded-xl lg:px-6">
+      <header className="sticky top-2 z-40 mx-auto mb-4 max-w-[1600px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:top-0 lg:mb-0 lg:max-w-none lg:px-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:h-[6.15rem] lg:flex-nowrap lg:gap-7 lg:rounded-none lg:border-0 lg:px-9 lg:py-0 lg:shadow-none">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl lg:hidden">
             DL
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold text-[#2F3437] sm:text-2xl">
+            <h1 className="truncate text-base font-bold text-[#121820] sm:text-2xl">
               Commande Atelier
             </h1>
             <p className="hidden text-sm text-[#626B72] sm:block">
@@ -136,8 +134,8 @@ export default function Header() {
           </div>
         </Link>
 
-        <form onSubmit={submitGlobalSearch} className="hidden max-w-xl flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm lg:flex">
-          <Search size={20} className="shrink-0 text-[#1e4c5e]" aria-hidden="true" />
+        <form onSubmit={submitGlobalSearch} className="hidden max-w-[34rem] flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm lg:flex">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100"><Search size={21} className="text-[#1d3440]" aria-hidden="true" /></span>
           <input
             type="search"
             value={globalSearch}
@@ -146,14 +144,14 @@ export default function Header() {
             className="min-w-0 flex-1 bg-transparent text-sm text-[#2F3437] outline-none placeholder:text-slate-400"
             aria-label="Rechercher dans le catalogue"
           />
-          <kbd className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-400">Entrée</kbd>
+          <kbd className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-400">Ctrl + K</kbd>
         </form>
 
-        <nav className="hidden items-center gap-2 xl:flex">
+        <nav className="hidden items-center gap-5 xl:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            return <Link key={item.href} href={item.href} className={`flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold ${active ? "border-[#f15a24] text-[#f15a24]" : "border-transparent text-slate-600 hover:text-[#1e4c5e]"}`}><Icon size={19} />{item.label}</Link>;
+            return <Link key={item.href} href={item.href} className={`flex h-[6.15rem] items-center gap-2 border-b-2 px-1 text-sm font-semibold ${active ? "border-[#f15a24] text-[#f15a24]" : "border-transparent text-slate-700 hover:text-[#1e4c5e]"}`}><Icon size={19} />{item.label}</Link>;
           })}
         </nav>
 

@@ -127,7 +127,9 @@ export default function CatalogueClient({
 
   return (
     <>
-      <Hero />
+      <div className="lg:-mx-8">
+        <Hero />
+      </div>
 
       <SearchBar
         value={search}
