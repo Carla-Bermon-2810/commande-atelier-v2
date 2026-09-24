@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase-server";
+import { requireAdminAccess } from "@/lib/admin-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
 
@@ -7,6 +8,8 @@ export default async function CommandePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminAccess();
+  const supabase = getServerSupabase();
   const { id } = await params;
 
   const { data: commande } = await supabase

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Boxes, Layers } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import ProductCard from "@/components/catalogue/ProductCard";
+import FamilyProductGrid from "@/components/catalogue/FamilyProductGrid";
+import { variantsUniques } from "@/components/catalogue/product-variants";
 import { supabase } from "@/lib/supabase";
 
 interface PageProps {
@@ -33,8 +34,8 @@ export default async function FamillePage({ params }: PageProps) {
   const { data, error } = await supabase
     .from("catalogue")
     .select("produit, photo, dimension, grain, famille")
-    .eq("categorie", categorie.nom.toUpperCase())
-    .eq("famille", familleNom)
+    .ilike("categorie", categorie.nom)
+    .ilike("famille", familleNom)
     .order("produit");
 
   if (error) {
@@ -47,8 +48,13 @@ export default async function FamillePage({ params }: PageProps) {
     );
   }
 
-  // Regroupement des articles par produit + dimension
-const groupes = new Map();
+  // Une fiche par produit : les formats et grains deviennent des variantes.
+const groupes = new Map<string, {
+  produit: string;
+  famille: string;
+  photo: string | null;
+  variants: { dimension?: string | null; grain?: string | null }[];
+}>();
 
 (data ?? []).forEach((p) => {
   let photo: string | null = null;
@@ -62,32 +68,25 @@ const groupes = new Map();
   }
 
 const produit = p.produit.trim().replace(/\s+/g, " ");
-const dimension = p.dimension.trim().replace(/\s+/g, " ");
-
-const cle = `${produit.toUpperCase()}-${dimension}`;
-  console.log(`[${cle}]`);
+const cle = produit.toLocaleUpperCase("fr");
   if (!groupes.has(cle)) {
     groupes.set(cle, {
-      produit: p.produit,
+      produit,
       famille: p.famille,
-      dimension: p.dimension,
       photo,
-      grains: [],
+      variants: [],
     });
   }
 
-  const groupe = groupes.get(cle);
-
-  if (
-    p.grain &&
-    p.grain !== "EMPTY" &&
-    !groupe.grains.includes(p.grain)
-  ) {
-    groupe.grains.push(p.grain);
-  }
+  const groupe = groupes.get(cle)!;
+  if (!groupe.photo && photo) groupe.photo = photo;
+  groupe.variants.push({ dimension: p.dimension, grain: p.grain });
 });
 
-const produits = Array.from(groupes.values());
+const produits = Array.from(groupes.values()).map((produit) => ({
+  ...produit,
+  variants: variantsUniques(produit.variants),
+}));
 
   return (
     <AppLayout>
@@ -102,52 +101,24 @@ const produits = Array.from(groupes.values());
                 </Link>
             </div>
 
-        {/* Hero */}
-
-        <div className="mb-2 rounded-3xl border bg-white p-6 shadow-sm">
-
-          <h1 className="text-4xl font-bold text-slate-900">
-            {familleNom}
-          </h1>
-
-          <div className="mt-2 flex items-center gap-6 text-sm text-slate-500">
-            <span>
-              <strong className="text-slate-900">
-                {produits.length}
-              </strong>{" "}
-              produit{produits.length > 1 ? "s" : ""}
-            </span>
+        <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-5 p-6 sm:p-8 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Catalogue · {categorie.nom}</p>
+              <div className="mt-3 flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-[#F95516]"><Boxes size={27} /></div>
+                <div>
+                  <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">{familleNom}</h1>
+                  <p className="mt-1 text-slate-500">Choisissez une variante, puis ajoutez-la au panier.</p>
+                </div>
+              </div>
+            </div>
+            <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"><Layers size={17} className="text-[#F95516]" />{produits.length} produit{produits.length > 1 ? "s" : ""}</span>
           </div>
+          <p className="border-t border-slate-100 bg-slate-50 px-6 py-3 text-sm text-slate-600 sm:px-8">Une carte correspond à un produit ; ses dimensions et grains sont regroupés dans une seule fiche.</p>
+        </section>
 
-        </div>
-
-        {/* Recherche */}
-
-        <div className="mb-5">
-          <div className="flex items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-sm">
-            <Search
-              className="text-slate-400"
-              size={20}
-            />
-
-            <input
-              type="text"
-              placeholder="Rechercher un produit..."
-              className="w-full bg-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Produits */}
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {produits.map((produit) => (
-            <ProductCard
-            key={`${produit.produit}-${produit.dimension}`}
-            produit={produit}
-          />
-          ))}
-        </div>
+        <FamilyProductGrid produits={produits} />
 
       </div>
     </AppLayout>

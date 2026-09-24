@@ -1,10 +1,13 @@
-import { supabase } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase-server";
+import { requireAdminAccess } from "@/lib/admin-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import Link from "next/link";
 import { supprimerCommande } from "./actions";
 import { Trash2, Eye } from "lucide-react";
 
 export default async function CommandesPage() {
+  await requireAdminAccess();
+  const supabase = getServerSupabase();
   const { data: commandes, error } = await supabase
     .from("commandes")
     .select("*")

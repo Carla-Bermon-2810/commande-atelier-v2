@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { adminData } from "@/lib/admin-api";
 
 import ArticleForm from "@/components/admin/ArticleForm";
 
@@ -22,37 +22,26 @@ export default function NouveauArticlePage() {
     setLoading(true);
 
     const [categoriesRes, famillesRes] = await Promise.all([
-      supabase
-        .from("categories")
-        .select("*")
-        .order("ordre"),
-
-      supabase
-        .from("famille")
-        .select("*")
-        .order("famille"),
+      adminData<any[]>("categories", "select", { order: "ordre" }),
+      adminData<any[]>("famille", "select", { order: "famille" }),
     ]);
-
-    setCategories(categoriesRes.data || []);
-    setFamilles(famillesRes.data || []);
+    setCategories(categoriesRes || []);
+    setFamilles(famillesRes || []);
 
     setLoading(false);
   }
 
   async function creerArticle(data: any) {
-    const { data: nouvelArticle, error } = await supabase
-      .from("catalogue")
-      .insert(data)
-      .select()
-      .single();
-  
-    if (error) {
+    try {
+      const articles = await adminData<any[]>("catalogue", "insert", { values: data });
+      const nouvelArticle = articles?.[0];
+      if (!nouvelArticle) throw new Error("Article non créé.");
+      router.push(`/admin/articles/${nouvelArticle.id}`);
+    } catch (error) {
       console.error(error);
-      alert(error.message);
+      alert("Erreur lors de la création de l'article.");
       return;
     }
-  
-    router.push(`/admin/articles/${nouvelArticle.id}`);
   }
 
   if (loading) {

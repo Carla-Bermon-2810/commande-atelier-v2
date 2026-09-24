@@ -27,8 +27,7 @@ type ProduitModal = {
   produit: string;
   famille: string;
   photo?: string | null;
-  dimension?: string | null;
-  grains: string[];
+  variants: { dimension?: string | null; grain?: string | null }[];
 };
 
 type Props = {
@@ -73,7 +72,7 @@ export default function CatalogueClient({
 
     const q = search.toLowerCase();
 
-    return catalogue.filter((p) =>
+    const resultats = catalogue.filter((p) =>
       [
         p.produit,
         p.categorie,
@@ -84,21 +83,26 @@ export default function CatalogueClient({
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q))
     );
+
+    // La recherche conserve une seule entrée par produit : les formats,
+    // dimensions et grains sont choisis dans la fiche qui s'ouvre ensuite.
+    return Array.from(
+      new Map(
+        resultats.map((produit) => [
+          `${produit.categorie.trim().toLowerCase()}|${produit.famille.trim().toLowerCase()}|${produit.produit.trim().toLowerCase()}`,
+          produit,
+        ])
+      ).values()
+    );
   }, [catalogue, search]);
 
   const ouvrirProduit = (produit: Produit) => {
     // Récupère toutes les variantes du même produit
     const variantes = catalogue.filter(
-      (p) => p.produit === produit.produit
-    );
-
-    // Récupère les grains disponibles sans doublons
-    const grains = Array.from(
-      new Set(
-        variantes
-          .map((p) => p.grain)
-          .filter((grain): grain is string => Boolean(grain))
-      )
+      (p) =>
+        p.produit.trim().toLowerCase() === produit.produit.trim().toLowerCase() &&
+        p.categorie.trim().toLowerCase() === produit.categorie.trim().toLowerCase() &&
+        p.famille.trim().toLowerCase() === produit.famille.trim().toLowerCase()
     );
 
     // On prend la première photo disponible
@@ -108,9 +112,11 @@ export default function CatalogueClient({
     setProduitSelectionne({
       produit: produit.produit,
       famille: produit.famille,
-      dimension: produit.dimension ?? null,
       photo: getPhotoUrl(photo),
-      grains,
+      variants: variantes.map((item) => ({
+        dimension: item.dimension,
+        grain: item.grain,
+      })),
     });
 
     setModalOuverte(true);

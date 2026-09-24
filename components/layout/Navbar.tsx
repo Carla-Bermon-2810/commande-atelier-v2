@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useCart } from "@/context/cart-context";
 import {
   ArrowLeft,
+  History,
   Home,
   ShoppingCart,
 } from "lucide-react";
@@ -68,6 +69,16 @@ export default function Navbar() {
             <Home size={18} />
             Accueil
           </Link>
+
+          {pathname === "/panier" && (
+            <Link
+              href="/admin/commandes"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 font-medium text-[#626B72] transition hover:border-[#F95516] hover:text-[#F95516]"
+            >
+              <History size={18} />
+              Historique
+            </Link>
+          )}
 
           <Link
             href="/panier"

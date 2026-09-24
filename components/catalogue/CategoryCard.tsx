@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   Disc3,
@@ -38,20 +37,16 @@ export default function CategoryCard({
     icons[icon.toLowerCase() as keyof typeof icons] ?? Package;
 
   return (
-    <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.2 }}
-      className="h-full"
-    >
+    <div className="h-full">
       <Link href={href} className="block h-full">
-        <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl">
+        <div className="group relative flex h-full min-h-48 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(30,41,59,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-[0_14px_28px_rgba(30,41,59,0.10)]">
 
           {/* Barre orange */}
           <div className="absolute left-0 top-0 h-full w-0.5 bg-[#F95516] opacity-0 transition-all duration-300 group-hover:opacity-100" />
 
           <div className="flex items-center justify-between">
 
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-[#626B72] transition-all duration-300 group-hover:bg-[#F95516] group-hover:text-white">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-50 text-[#F95516] transition-colors duration-200 group-hover:bg-[#F95516] group-hover:text-white">
               <Icon size={26} strokeWidth={2} />
             </div>
 
@@ -64,7 +59,7 @@ export default function CategoryCard({
 
           <div className="mt-5 flex-1">
 
-            <h3 className="text-xl font-bold uppercase tracking-wide text-[#2F3437]">
+            <h3 className="text-lg font-bold uppercase tracking-[.06em] text-[#2F3437]">
               {title}
             </h3>
 
@@ -78,6 +73,6 @@ export default function CategoryCard({
 
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }

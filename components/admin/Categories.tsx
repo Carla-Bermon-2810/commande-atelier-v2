@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { adminData } from "@/lib/admin-api";
 
 import CategoryList from "./CategoryList";
 import CategoryForm from "./CategoryForm";
@@ -18,17 +18,7 @@ export default function Categories() {
   }, []);
 
   async function chargerCategories() {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .order("nom");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setCategories(data ?? []);
+    try { setCategories(await adminData<any[]>("categories", "select", { order: "nom" }) ?? []); } catch (error) { console.error(error); }
   }
 
   function nouvelleCategorie() {
@@ -53,22 +43,9 @@ export default function Categories() {
 
     try {
       if (categorieSelectionnee?.id) {
-        const { error } = await supabase
-          .from("categories")
-          .update({
-            nom,
-          })
-          .eq("id", categorieSelectionnee.id);
-
-        if (error) throw error;
+        await adminData("categories", "update", { values: { nom }, filters: [{ column: "id", value: categorieSelectionnee.id }] });
       } else {
-        const { error } = await supabase
-          .from("categories")
-          .insert({
-            nom,
-          });
-
-        if (error) throw error;
+        await adminData("categories", "insert", { values: { nom } });
       }
 
       await chargerCategories();
@@ -95,12 +72,7 @@ export default function Categories() {
       return;
 
     try {
-      const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", categorieSelectionnee.id);
-
-      if (error) throw error;
+      await adminData("categories", "delete", { values: {}, filters: [{ column: "id", value: categorieSelectionnee.id }] });
 
       setCategorieSelectionnee(null);
 

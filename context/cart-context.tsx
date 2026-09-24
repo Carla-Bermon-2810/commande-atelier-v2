@@ -35,6 +35,21 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+function isCartItem(value: unknown): value is CartItem {
+  if (!value || typeof value !== "object") return false;
+
+  const item = value as Record<string, unknown>;
+
+  return (
+    typeof item.article === "string" &&
+    typeof item.famille === "string" &&
+    typeof item.quantite === "number" &&
+    Number.isInteger(item.quantite) &&
+    item.quantite > 0 &&
+    (item.photo === undefined || typeof item.photo === "string")
+  );
+}
+
 export function CartProvider({
   children,
 }: {
@@ -46,8 +61,21 @@ export function CartProvider({
   useEffect(() => {
     const saved = localStorage.getItem("atelier-cart");
 
-    if (saved) {
-      setCart(JSON.parse(saved));
+    if (!saved) return;
+
+    try {
+      const parsed: unknown = JSON.parse(saved);
+
+      if (Array.isArray(parsed) && parsed.every(isCartItem)) {
+        // Le panier est volontairement restauré après hydratation pour éviter
+        // une divergence entre le rendu serveur et le navigateur.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCart(parsed);
+      } else {
+        localStorage.removeItem("atelier-cart");
+      }
+    } catch {
+      localStorage.removeItem("atelier-cart");
     }
   }, []);
 
@@ -70,7 +98,7 @@ export function CartProvider({
           a.article === item.article
             ? {
                 ...a,
-                quantite: a.quantite + item.quantite,
+                quantite: Math.min(10_000, a.quantite + item.quantite),
               }
             : a
         );
@@ -86,7 +114,7 @@ export function CartProvider({
         a.article === article
           ? {
               ...a,
-              quantite: a.quantite + 1,
+              quantite: Math.min(10_000, a.quantite + 1),
             }
           : a
       )
@@ -114,7 +142,7 @@ export function CartProvider({
         a.article === article
           ? {
               ...a,
-              quantite: Math.max(1, quantite),
+              quantite: Math.min(10_000, Math.max(1, quantite)),
             }
           : a
       )

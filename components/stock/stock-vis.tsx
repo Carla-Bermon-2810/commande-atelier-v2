@@ -5,11 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  History,
   Minus,
   Package,
   Plus,
   Settings,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react";
@@ -26,34 +26,22 @@ type Vis = {
   seuilBoites: number;
 };
 
-type Mouvement = {
-  id: number;
-  visId: number;
-  type: "reception" | "sortie" | "ajustement";
-  quantite: number;
-  commentaire: string;
-  date: string;
-};
-
 export default function StockVis() {
   const [vis, setVis] = useState<Vis[]>([]);
-  const [mouvements, setMouvements] = useState<Mouvement[]>([]);
 
   const [recherche, setRecherche] = useState("");
   const [matiereFiltre, setMatiereFiltre] = useState("toutes");
   const [statutFiltre, setStatutFiltre] = useState("tous");
 
   const [modal, setModal] = useState<
-    "reception" | "sortie" | "ajustement" | "historique" | "ajouter" | null
+    "sortie" | "ajustement" | "ajouter" | "supprimer" | null
   >(null);
 
   const [visSelectionnee, setVisSelectionnee] = useState<Vis | null>(null);
 
   const [quantite, setQuantite] = useState("");
-  const [commentaire, setCommentaire] = useState("");
 
   const [nouvelleReference, setNouvelleReference] = useState("");
-  const [nouvelleDesignation, setNouvelleDesignation] = useState("");
   const [nouvelleMatiere, setNouvelleMatiere] = useState("");
   const [nouvelleDimension, setNouvelleDimension] = useState("");
   const [nouvellesPiecesParBoite, setNouvellesPiecesParBoite] =
@@ -76,40 +64,36 @@ export default function StockVis() {
     setErreur("");
 
     const { data, error } = await supabase
-        .schema("public")
-        .from("stock_vis")
-        .select("*")
-        .order("id", { ascending: true });
+      .schema("public")
+      .from("stock_vis")
+      .select("*")
+      .order("id", { ascending: true });
 
-      if (error) {
-        console.error("ERREUR SUPABASE STOCK VIS");
-        console.error("message :", error.message);
-        console.error("details :", error.details);
-        console.error("hint :", error.hint);
-        console.error("code :", error.code);
-        console.error("erreur complète :", JSON.stringify(error));
-      
-        setErreur(
-          error.message ||
-            error.details ||
-            error.hint ||
-            `Erreur Supabase (${error.code || "inconnue"})`
-        );
-      
-        setChargement(false);
-        return;
-      }
+    if (error) {
+      console.error("ERREUR SUPABASE STOCK VIS");
+      console.error(error);
+
+      setErreur(
+        error.message ||
+          error.details ||
+          error.hint ||
+          `Erreur Supabase (${error.code || "inconnue"})`
+      );
+
+      setChargement(false);
+      return;
+    }
 
     const visConverties: Vis[] = (data ?? []).map((item) => ({
       id: item.id,
       reference: item.reference,
-      designation: item.designation,
+      designation: item.designation ?? "",
       matiere: item.matiere ?? "—",
       dimension: item.dimension ?? "—",
-      piecesParBoite: item.pieces_par_boite,
-      boitesPleines: item.boites_pleines,
-      piecesRestantes: item.pieces_restantes,
-      seuilBoites: item.seuil_boites,
+      piecesParBoite: Number(item.pieces_par_boite ?? 0),
+      boitesPleines: Number(item.boites_pleines ?? 0),
+      piecesRestantes: Number(item.pieces_restantes ?? 0),
+      seuilBoites: Number(item.seuil_boites ?? 0),
     }));
 
     setVis(visConverties);
@@ -124,7 +108,6 @@ export default function StockVis() {
     setModal(null);
     setVisSelectionnee(null);
     setQuantite("");
-    setCommentaire("");
   }
 
   function getStock(item: Vis) {
@@ -135,14 +118,17 @@ export default function StockVis() {
   }
 
   function getMaximum(item: Vis) {
-    // Pour l'instant : affichage sur une base de 4 boîtes.
     return 4 * item.piecesParBoite;
   }
 
   function getPourcentage(item: Vis) {
+    const maximum = getMaximum(item);
+
+    if (maximum <= 0) return 0;
+
     return Math.min(
       100,
-      Math.round((getStock(item) / getMaximum(item)) * 100)
+      Math.round((getStock(item) / maximum) * 100)
     );
   }
 
@@ -171,7 +157,6 @@ export default function StockVis() {
       const rechercheOK =
         !texte ||
         item.reference.toLowerCase().includes(texte) ||
-        item.designation.toLowerCase().includes(texte) ||
         item.dimension.toLowerCase().includes(texte) ||
         item.matiere.toLowerCase().includes(texte);
 
@@ -200,148 +185,31 @@ export default function StockVis() {
   ).length;
 
   // ============================================================
-  // HISTORIQUE LOCAL POUR LE MOMENT
-  // ============================================================
-
-  function ajouterMouvement(
-    visId: number,
-    type: Mouvement["type"],
-    quantite: number,
-    texte: string
-  ) {
-    setMouvements((anciens) => [
-      {
-        id: Date.now(),
-        visId,
-        type,
-        quantite,
-        commentaire: texte,
-        date: new Date().toLocaleString("fr-FR"),
-      },
-      ...anciens,
-    ]);
-  }
-
-  // ============================================================
   // OUVERTURE DES MODALES
   // ============================================================
-
-  function ouvrirReception(item: Vis) {
-    setVisSelectionnee(item);
-    setQuantite("");
-    setCommentaire("");
-    setModal("reception");
-  }
 
   function ouvrirSortie(item: Vis) {
     setVisSelectionnee(item);
     setQuantite("");
-    setCommentaire("");
     setModal("sortie");
   }
 
   function ouvrirAjustement(item: Vis) {
     setVisSelectionnee(item);
     setQuantite(String(getStock(item)));
-    setCommentaire("");
     setModal("ajustement");
   }
 
-  function ouvrirHistorique(item: Vis) {
+  function ouvrirSuppression(item: Vis) {
     setVisSelectionnee(item);
-    setModal("historique");
-  }
-
-  // ============================================================
-  // RECEPTION
-  // ============================================================
-
-  async function receptionner() {
-    if (!visSelectionnee) return;
-  
-    const qte = Number(quantite);
-  
-    if (!qte || qte <= 0) {
-      alert("Indique une quantité supérieure à 0.");
-      return;
-    }
-  
-    const stock = getStock(visSelectionnee);
-    const nouveauStock = stock + qte;
-  
-    const boitesPleines = Math.floor(
-      nouveauStock / visSelectionnee.piecesParBoite
-    );
-  
-    const piecesRestantes =
-      nouveauStock % visSelectionnee.piecesParBoite;
-  
-    setChargement(true);
-    setErreur("");
-  
-    try {
-      // 1. Enregistrer le nouveau stock dans Supabase
-      const { error: erreurStock } = await supabase
-        .from("stock_vis")
-        .update({
-          boites_pleines: boitesPleines,
-          pieces_restantes: piecesRestantes,
-        })
-        .eq("id", visSelectionnee.id);
-  
-      if (erreurStock) {
-        console.error("Erreur réception vis :", erreurStock);
-        alert(
-          "Impossible d'enregistrer la réception : " +
-            erreurStock.message
-        );
-        return;
-      }
-  
-      // 2. Enregistrer le mouvement
-      const { error: erreurMouvement } = await supabase
-        .from("stock_mouvements_vis")
-        .insert({
-          vis_id: visSelectionnee.id,
-          type_mouvement: "reception",
-          quantite: qte,
-          commentaire: commentaire || "Réception de stock",
-        });
-  
-      if (erreurMouvement) {
-        console.error(
-          "Erreur mouvement réception vis :",
-          erreurMouvement
-        );
-  
-        alert(
-          "Le stock a été enregistré, mais l'historique n'a pas pu être enregistré : " +
-            erreurMouvement.message
-        );
-      }
-  
-      // 3. Recharger depuis Supabase
-      await chargerVis();
-  
-      // 4. Fermer la fenêtre
-      fermerModal();
-    } catch (error: any) {
-      console.error("Erreur réception :", error);
-  
-      alert(
-        "Une erreur est survenue : " +
-          (error?.message || "erreur inconnue")
-      );
-    } finally {
-      setChargement(false);
-    }
+    setModal("supprimer");
   }
 
   // ============================================================
   // SORTIE
   // ============================================================
 
-  function sortirStock() {
+  async function sortirStock() {
     if (!visSelectionnee) return;
 
     const qte = Number(quantite);
@@ -353,7 +221,11 @@ export default function StockVis() {
     }
 
     if (qte > stock) {
-      alert(`Stock insuffisant : ${stock} pièce(s) disponible(s).`);
+      alert(
+        `Stock insuffisant : ${stock.toLocaleString(
+          "fr-FR"
+        )} pièce(s) disponible(s).`
+      );
       return;
     }
 
@@ -366,38 +238,54 @@ export default function StockVis() {
     const piecesRestantes =
       nouveauStock % visSelectionnee.piecesParBoite;
 
-    setVis((anciens) =>
-      anciens.map((item) =>
-        item.id === visSelectionnee.id
-          ? {
-              ...item,
-              boitesPleines,
-              piecesRestantes,
-            }
-          : item
-      )
-    );
+    setChargement(true);
+    setErreur("");
 
-    ajouterMouvement(
-      visSelectionnee.id,
-      "sortie",
-      qte,
-      commentaire || "Sortie de stock"
-    );
+    try {
+      const { error } = await supabase
+        .from("stock_vis")
+        .update({
+          boites_pleines: boitesPleines,
+          pieces_restantes: piecesRestantes,
+        })
+        .eq("id", visSelectionnee.id);
 
-    fermerModal();
+      if (error) {
+        console.error("Erreur sortie vis :", error);
+        alert(
+          "Impossible d'enregistrer la sortie : " +
+            error.message
+        );
+        return;
+      }
+
+      await chargerVis();
+      fermerModal();
+    } catch (error: any) {
+      console.error("Erreur sortie :", error);
+
+      alert(
+        "Une erreur est survenue : " +
+          (error?.message || "erreur inconnue")
+      );
+    } finally {
+      setChargement(false);
+    }
   }
 
   // ============================================================
   // AJUSTEMENT
   // ============================================================
 
-  function ajusterStock() {
+  async function ajusterStock() {
     if (!visSelectionnee) return;
 
     const nouveauStock = Number(quantite);
 
-    if (Number.isNaN(nouveauStock) || nouveauStock < 0) {
+    if (
+      Number.isNaN(nouveauStock) ||
+      nouveauStock < 0
+    ) {
       alert("Indique une quantité valide.");
       return;
     }
@@ -409,26 +297,39 @@ export default function StockVis() {
     const piecesRestantes =
       nouveauStock % visSelectionnee.piecesParBoite;
 
-    setVis((anciens) =>
-      anciens.map((item) =>
-        item.id === visSelectionnee.id
-          ? {
-              ...item,
-              boitesPleines,
-              piecesRestantes,
-            }
-          : item
-      )
-    );
+    setChargement(true);
+    setErreur("");
 
-    ajouterMouvement(
-      visSelectionnee.id,
-      "ajustement",
-      nouveauStock,
-      commentaire || "Ajustement du stock"
-    );
+    try {
+      const { error } = await supabase
+        .from("stock_vis")
+        .update({
+          boites_pleines: boitesPleines,
+          pieces_restantes: piecesRestantes,
+        })
+        .eq("id", visSelectionnee.id);
 
-    fermerModal();
+      if (error) {
+        console.error("Erreur ajustement vis :", error);
+        alert(
+          "Impossible d'enregistrer l'ajustement : " +
+            error.message
+        );
+        return;
+      }
+
+      await chargerVis();
+      fermerModal();
+    } catch (error: any) {
+      console.error("Erreur ajustement :", error);
+
+      alert(
+        "Une erreur est survenue : " +
+          (error?.message || "erreur inconnue")
+      );
+    } finally {
+      setChargement(false);
+    }
   }
 
   // ============================================================
@@ -436,57 +337,127 @@ export default function StockVis() {
   // ============================================================
 
   async function creerReference() {
-    if (!nouvelleReference || !nouvelleDesignation) {
-      alert("La référence et la désignation sont obligatoires.");
+    if (!nouvelleReference.trim()) {
+      alert("La référence est obligatoire.");
       return;
     }
-  
-    const piecesParBoite = Number(nouvellesPiecesParBoite);
+
+    const piecesParBoite = Number(
+      nouvellesPiecesParBoite
+    );
+
     const seuil = Number(nouveauSeuil);
-  
+
     if (piecesParBoite <= 0) {
-      alert("Le nombre de pièces par boîte doit être supérieur à 0.");
+      alert(
+        "Le nombre de pièces par boîte doit être supérieur à 0."
+      );
       return;
     }
-  
+
+    if (seuil < 0) {
+      alert("Le stock minimum ne peut pas être négatif.");
+      return;
+    }
+
     setChargement(true);
     setErreur("");
-  
+
     try {
       const { error } = await supabase
         .from("stock_vis")
         .insert({
           reference: nouvelleReference.trim(),
-          designation: nouvelleDesignation.trim(),
+
+          // On conserve la colonne en base si elle existe,
+          // mais elle n'est plus affichée dans l'interface.
+          designation: nouvelleReference.trim(),
+
           matiere: nouvelleMatiere.trim() || null,
           dimension: nouvelleDimension.trim() || null,
+
           pieces_par_boite: piecesParBoite,
           boites_pleines: 0,
           pieces_restantes: 0,
           seuil_boites: seuil,
         });
-  
+
       if (error) {
-        console.error("Erreur création référence vis :", error);
-        alert("Erreur lors de la création : " + error.message);
+        console.error(
+          "Erreur création référence vis :",
+          error
+        );
+
+        alert(
+          "Erreur lors de la création : " +
+            error.message
+        );
+
         return;
       }
-  
-      // Recharger les références depuis Supabase
+
       await chargerVis();
-  
-      // Réinitialiser le formulaire
+
       setNouvelleReference("");
-      setNouvelleDesignation("");
       setNouvelleMatiere("");
       setNouvelleDimension("");
       setNouvellesPiecesParBoite("200");
       setNouveauSeuil("2");
-  
+
       fermerModal();
     } catch (error: any) {
       console.error("Erreur création référence :", error);
-  
+
+      alert(
+        "Une erreur est survenue : " +
+          (error?.message || "erreur inconnue")
+      );
+    } finally {
+      setChargement(false);
+    }
+  }
+
+  // ============================================================
+  // SUPPRESSION
+  // ============================================================
+
+  async function supprimerReference() {
+    if (!visSelectionnee) return;
+
+    const confirmation = window.confirm(
+      `Supprimer définitivement la référence ${visSelectionnee.reference} ?`
+    );
+
+    if (!confirmation) return;
+
+    setChargement(true);
+    setErreur("");
+
+    try {
+      const { error } = await supabase
+        .from("stock_vis")
+        .delete()
+        .eq("id", visSelectionnee.id);
+
+      if (error) {
+        console.error(
+          "Erreur suppression vis :",
+          error
+        );
+
+        alert(
+          "Impossible de supprimer la référence : " +
+            error.message
+        );
+
+        return;
+      }
+
+      await chargerVis();
+      fermerModal();
+    } catch (error: any) {
+      console.error("Erreur suppression :", error);
+
       alert(
         "Une erreur est survenue : " +
           (error?.message || "erreur inconnue")
@@ -529,12 +500,6 @@ export default function StockVis() {
     );
   }
 
-  const historique = visSelectionnee
-    ? mouvements.filter(
-        (mouvement) => mouvement.visId === visSelectionnee.id
-      )
-    : [];
-
   // ============================================================
   // AFFICHAGE
   // ============================================================
@@ -543,10 +508,14 @@ export default function StockVis() {
     <div className="mx-auto max-w-7xl p-8">
 
       {/* EN-TÊTE */}
+
       <div className="mb-8 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Package size={32} className="text-[#F95516]" />
+            <Package
+              size={32}
+              className="text-[#F95516]"
+            />
 
             <h1 className="text-4xl font-bold text-[#2F3437]">
               Stock vis
@@ -569,6 +538,7 @@ export default function StockVis() {
       </div>
 
       {/* STOCK */}
+
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
         <div className="border-b border-slate-200 px-6 py-5">
@@ -580,7 +550,7 @@ export default function StockVis() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Suivi des références, boîtes pleines et pièces restantes.
+                Suivi des références et des niveaux de stock.
               </p>
             </div>
 
@@ -590,11 +560,16 @@ export default function StockVis() {
           </div>
 
           {/* COMPTEURS */}
+
           <div className="mt-5 grid gap-3 md:grid-cols-3">
 
             <button
               type="button"
-              onClick={() => setStatutFiltre("ok")}
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "ok" ? "tous" : "ok"
+                )
+              }
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-green-200"
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
@@ -609,7 +584,13 @@ export default function StockVis() {
 
             <button
               type="button"
-              onClick={() => setStatutFiltre("recommander")}
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "recommander"
+                    ? "tous"
+                    : "recommander"
+                )
+              }
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
@@ -624,7 +605,13 @@ export default function StockVis() {
 
             <button
               type="button"
-              onClick={() => setStatutFiltre("rupture")}
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "rupture"
+                    ? "tous"
+                    : "rupture"
+                )
+              }
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -640,24 +627,34 @@ export default function StockVis() {
           </div>
 
           {/* FILTRES */}
+
           <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
 
             <input
               value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher une référence, désignation..."
+              onChange={(e) =>
+                setRecherche(e.target.value)
+              }
+              placeholder="Rechercher une référence..."
               className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#F95516]"
             />
 
             <select
               value={matiereFiltre}
-              onChange={(e) => setMatiereFiltre(e.target.value)}
+              onChange={(e) =>
+                setMatiereFiltre(e.target.value)
+              }
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
-              <option value="toutes">Toutes les matières</option>
+              <option value="toutes">
+                Toutes les matières
+              </option>
 
               {matieres.map((matiere) => (
-                <option key={matiere} value={matiere}>
+                <option
+                  key={matiere}
+                  value={matiere}
+                >
                   {matiere}
                 </option>
               ))}
@@ -665,13 +662,26 @@ export default function StockVis() {
 
             <select
               value={statutFiltre}
-              onChange={(e) => setStatutFiltre(e.target.value)}
+              onChange={(e) =>
+                setStatutFiltre(e.target.value)
+              }
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
-              <option value="tous">Tous les statuts</option>
-              <option value="ok">Stock OK</option>
-              <option value="recommander">À recommander</option>
-              <option value="rupture">Rupture</option>
+              <option value="tous">
+                Tous les statuts
+              </option>
+
+              <option value="ok">
+                Stock OK
+              </option>
+
+              <option value="recommander">
+                À recommander
+              </option>
+
+              <option value="rupture">
+                Rupture
+              </option>
             </select>
 
           </div>
@@ -711,21 +721,25 @@ export default function StockVis() {
 
             {visFiltres.map((item) => {
               const stock = getStock(item);
-              const pourcentage = getPourcentage(item);
+              const pourcentage =
+                getPourcentage(item);
 
               return (
                 <div
                   key={item.id}
                   className="px-6 py-6 transition hover:bg-slate-50/60"
                 >
+
                   <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+
+                    {/* INFORMATIONS */}
 
                     <div className="min-w-0 flex-1">
 
                       <div className="flex flex-wrap items-center gap-3">
 
                         <h3 className="text-lg font-bold text-[#2F3437]">
-                          {item.designation}
+                          {item.reference}
                         </h3>
 
                         {renderStatut(item)}
@@ -735,15 +749,17 @@ export default function StockVis() {
                       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
 
                         <span>
-                          Réf. <strong>{item.reference}</strong>
+                          Matière :{" "}
+                          <strong>
+                            {item.matiere}
+                          </strong>
                         </span>
 
                         <span>
-                          Matière : <strong>{item.matiere}</strong>
-                        </span>
-
-                        <span>
-                          Dimension : <strong>{item.dimension}</strong>
+                          Dimension :{" "}
+                          <strong>
+                            {item.dimension}
+                          </strong>
                         </span>
 
                         <span>
@@ -751,6 +767,8 @@ export default function StockVis() {
                         </span>
 
                       </div>
+
+                      {/* STOCK */}
 
                       <div className="mt-5 max-w-2xl">
 
@@ -762,7 +780,10 @@ export default function StockVis() {
                             </div>
 
                             <div className="mt-1 text-2xl font-bold text-[#2F3437]">
-                              {stock.toLocaleString("fr-FR")} pièces
+                              {stock.toLocaleString(
+                                "fr-FR"
+                              )}{" "}
+                              pièces
                             </div>
                           </div>
 
@@ -781,12 +802,12 @@ export default function StockVis() {
                         </div>
 
                         <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
-
                           <div
                             className="h-full rounded-full bg-[#F95516] transition-all"
-                            style={{ width: `${pourcentage}%` }}
+                            style={{
+                              width: `${pourcentage}%`,
+                            }}
                           />
-
                         </div>
 
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
@@ -798,16 +819,6 @@ export default function StockVis() {
                             </strong>{" "}
                             boîte(s) pleine(s)
                           </span>
-
-                          {item.piecesRestantes > 0 && (
-                            <span>
-                              +{" "}
-                              <strong className="text-slate-700">
-                                {item.piecesRestantes}
-                              </strong>{" "}
-                              pièce(s)
-                            </span>
-                          )}
 
                           <span>
                             Minimum :{" "}
@@ -824,12 +835,14 @@ export default function StockVis() {
 
                     {/* ACTIONS */}
 
-                    <div className="flex flex-wrap gap-2 xl:w-[390px] xl:justify-end">
+                    <div className="flex flex-nowrap items-center gap-2 xl:w-auto xl:justify-end">
 
                       <button
                         type="button"
-                        onClick={() => ouvrirSortie(item)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() =>
+                          ouvrirSortie(item)
+                        }
+                        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                       >
                         <Minus size={17} />
                         Sortie
@@ -837,17 +850,10 @@ export default function StockVis() {
 
                       <button
                         type="button"
-                        onClick={() => ouvrirReception(item)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#F95516] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e04d13]"
-                      >
-                        <Plus size={17} />
-                        Réception
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => ouvrirAjustement(item)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        onClick={() =>
+                          ouvrirAjustement(item)
+                        }
+                        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                       >
                         <Settings size={17} />
                         Ajuster
@@ -855,25 +861,29 @@ export default function StockVis() {
 
                       <button
                         type="button"
-                        onClick={() => ouvrirHistorique(item)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        onClick={() =>
+                          ouvrirSuppression(item)
+                        }
+                        className="inline-flex shrink-0 items-center justify-center rounded-xl border border-red-200 bg-white p-2.5 text-red-500 transition hover:bg-red-50 hover:text-red-700"
+                        title="Supprimer"
                       >
-                        <History size={17} />
-                        Historique
+                        <Trash2 size={18} />
                       </button>
 
                     </div>
 
                   </div>
+
                 </div>
               );
             })}
 
-            {!chargement && visFiltres.length === 0 && (
-              <div className="px-6 py-12 text-center text-slate-500">
-                Aucune référence de vis en stock.
-              </div>
-            )}
+            {!chargement &&
+              visFiltres.length === 0 && (
+                <div className="px-6 py-12 text-center text-slate-500">
+                  Aucune référence de vis en stock.
+                </div>
+              )}
 
           </div>
         )}
@@ -887,23 +897,30 @@ export default function StockVis() {
 
           <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
 
+            {/* HEADER */}
+
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
 
               <div>
 
                 <h2 className="text-xl font-bold text-[#2F3437]">
 
-                  {modal === "ajouter" && "Ajouter une référence"}
-                  {modal === "reception" && "Réception de stock"}
-                  {modal === "sortie" && "Sortie de stock"}
-                  {modal === "ajustement" && "Ajuster le stock"}
-                  {modal === "historique" && "Historique"}
+                  {modal === "ajouter" &&
+                    "Ajouter une référence"}
+
+                  {modal === "sortie" &&
+                    "Sortie de stock"}
+
+                  {modal === "ajustement" &&
+                    "Ajuster le stock"}
+
+                  {modal === "supprimer" &&
+                    "Supprimer la référence"}
 
                 </h2>
 
                 {visSelectionnee && (
                   <p className="mt-1 text-sm text-slate-500">
-                    {visSelectionnee.designation} —{" "}
                     {visSelectionnee.reference}
                   </p>
                 )}
@@ -927,17 +944,12 @@ export default function StockVis() {
 
                 <input
                   value={nouvelleReference}
-                  onChange={(e) => setNouvelleReference(e.target.value)}
-                  placeholder="Référence — ex. VIS-M8X30"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                />
-
-                <input
-                  value={nouvelleDesignation}
                   onChange={(e) =>
-                    setNouvelleDesignation(e.target.value)
+                    setNouvelleReference(
+                      e.target.value
+                    )
                   }
-                  placeholder="Désignation — ex. Vis CHC M8 × 30"
+                  placeholder="Référence — ex. VIS-M8X30"
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
                 />
 
@@ -946,7 +958,9 @@ export default function StockVis() {
                   <input
                     value={nouvelleMatiere}
                     onChange={(e) =>
-                      setNouvelleMatiere(e.target.value)
+                      setNouvelleMatiere(
+                        e.target.value
+                      )
                     }
                     placeholder="Matière"
                     className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
@@ -955,7 +969,9 @@ export default function StockVis() {
                   <input
                     value={nouvelleDimension}
                     onChange={(e) =>
-                      setNouvelleDimension(e.target.value)
+                      setNouvelleDimension(
+                        e.target.value
+                      )
                     }
                     placeholder="Dimension"
                     className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
@@ -976,7 +992,9 @@ export default function StockVis() {
                       min="1"
                       value={nouvellesPiecesParBoite}
                       onChange={(e) =>
-                        setNouvellesPiecesParBoite(e.target.value)
+                        setNouvellesPiecesParBoite(
+                          e.target.value
+                        )
                       }
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
                     />
@@ -994,7 +1012,9 @@ export default function StockVis() {
                       min="0"
                       value={nouveauSeuil}
                       onChange={(e) =>
-                        setNouveauSeuil(e.target.value)
+                        setNouveauSeuil(
+                          e.target.value
+                        )
                       }
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
                     />
@@ -1024,10 +1044,9 @@ export default function StockVis() {
               </div>
             )}
 
-            {/* RECEPTION / SORTIE / AJUSTEMENT */}
+            {/* SORTIE / AJUSTEMENT */}
 
-            {(modal === "reception" ||
-              modal === "sortie" ||
+            {(modal === "sortie" ||
               modal === "ajustement") &&
               visSelectionnee && (
                 <div className="space-y-5 px-6 py-6">
@@ -1039,9 +1058,9 @@ export default function StockVis() {
                     </div>
 
                     <div className="mt-1 text-2xl font-bold text-[#2F3437]">
-                      {getStock(visSelectionnee).toLocaleString(
-                        "fr-FR"
-                      )}{" "}
+                      {getStock(
+                        visSelectionnee
+                      ).toLocaleString("fr-FR")}{" "}
                       pièces
                     </div>
 
@@ -1052,32 +1071,24 @@ export default function StockVis() {
                     <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                       {modal === "ajustement"
                         ? "Nouveau stock réel"
-                        : "Quantité"}
+                        : "Quantité à sortir"}
                     </label>
 
                     <input
                       type="number"
                       min="0"
                       value={quantite}
-                      onChange={(e) => setQuantite(e.target.value)}
+                      onChange={(e) =>
+                        setQuantite(
+                          e.target.value
+                        )
+                      }
                       autoFocus
                       placeholder="Ex. 200"
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg outline-none focus:border-[#F95516]"
                     />
 
                   </div>
-
-                  <textarea
-                    value={commentaire}
-                    onChange={(e) => setCommentaire(e.target.value)}
-                    rows={3}
-                    placeholder={
-                      modal === "ajustement"
-                        ? "Motif de l'ajustement"
-                        : "Commentaire facultatif"
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                  />
 
                   <div className="flex justify-end gap-3">
 
@@ -1090,11 +1101,9 @@ export default function StockVis() {
 
                     <button
                       onClick={
-                        modal === "reception"
-                          ? receptionner
-                          : modal === "sortie"
-                            ? sortirStock
-                            : ajusterStock
+                        modal === "sortie"
+                          ? sortirStock
+                          : ajusterStock
                       }
                       className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white"
                     >
@@ -1106,66 +1115,66 @@ export default function StockVis() {
                 </div>
               )}
 
-            {/* HISTORIQUE */}
+            {/* SUPPRESSION */}
 
-            {modal === "historique" && visSelectionnee && (
-              <div className="max-h-[60vh] overflow-y-auto px-6 py-6">
+            {modal === "supprimer" &&
+              visSelectionnee && (
+                <div className="space-y-5 px-6 py-6">
 
-                {historique.length === 0 ? (
-                  <div className="py-8 text-center text-slate-500">
-                    Aucun mouvement pour cette référence.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
 
-                    {historique.map((mouvement) => (
-                      <div
-                        key={mouvement.id}
-                        className="rounded-2xl border border-slate-200 p-4"
-                      >
+                    <div className="flex items-start gap-3">
 
-                        <div className="flex justify-between gap-4">
+                      <Trash2
+                        size={22}
+                        className="mt-0.5 text-red-600"
+                      />
 
+                      <div>
+
+                        <p className="font-semibold text-red-800">
+                          Supprimer cette référence ?
+                        </p>
+
+                        <p className="mt-1 text-sm text-red-700">
+                          La référence{" "}
                           <strong>
-                            {mouvement.type === "reception" &&
-                              "📦 Réception"}
-
-                            {mouvement.type === "sortie" &&
-                              "➖ Sortie"}
-
-                            {mouvement.type === "ajustement" &&
-                              "⚙️ Ajustement"}
-                          </strong>
-
-                          <strong className="text-[#F95516]">
-                            {mouvement.quantite.toLocaleString(
-                              "fr-FR"
-                            )}{" "}
-                            pièces
-                          </strong>
-
-                        </div>
-
-                        {mouvement.commentaire && (
-                          <p className="mt-2 text-sm text-slate-500">
-                            {mouvement.commentaire}
-                          </p>
-                        )}
-
-                        <p className="mt-2 text-xs text-slate-400">
-                          {mouvement.date}
+                            {visSelectionnee.reference}
+                          </strong>{" "}
+                          sera définitivement supprimée
+                          du stock.
                         </p>
 
                       </div>
-                    ))}
+
+                    </div>
 
                   </div>
-                )}
 
-              </div>
-            )}
+                  <div className="flex justify-end gap-3">
+
+                    <button
+                      onClick={fermerModal}
+                      className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
+                    >
+                      Annuler
+                    </button>
+
+                    <button
+                      onClick={supprimerReference}
+                      className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                    >
+                      <Trash2 size={17} />
+                      Supprimer
+                    </button>
+
+                  </div>
+
+                </div>
+              )}
 
           </div>
+
         </div>
       )}
 

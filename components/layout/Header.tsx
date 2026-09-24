@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
-  Bell,
   FolderOpen,
-  History,
   Settings,
-  UserCircle2,
   Package,
 } from "lucide-react";
 
@@ -15,26 +13,37 @@ import CartButton from "@/components/panier/CartButton";
 
 export default function Header() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/access")
+      .then((response) => response.json())
+      .then((result: { role?: string | null }) => setIsAdmin(result.role === "admin"))
+      .catch(() => setIsAdmin(false));
+  }, [pathname]);
 
   const navItems = [
     { href: "/", label: "Catalogue", icon: FolderOpen },
-    { href: "/admin/commandes", label: "Historique", icon: History },
     { href: "/stock", label: "Stock", icon: Package },
-    { href: "/admin", label: "Administration", icon: Settings },
   ];
 
+  const isActive = (href: string) =>
+    pathname === href ||
+    (href !== "/" && href !== "/admin" && pathname.startsWith(href)) ||
+    (href === "/admin" && pathname.startsWith("/admin"));
+
   return (
-    <header className="sticky top-4 z-50 mb-8">
-      <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white/90 px-8 py-5 shadow-xl backdrop-blur">
-        <Link href="/" className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F95516] to-[#ff7b45] text-2xl font-bold text-white shadow-lg">
+    <header className="sticky top-3 z-50 mx-auto mb-6 max-w-[1500px] px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:px-5 lg:px-6">
+        <Link href="/" className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F95516] to-[#ff7b45] text-xl font-bold text-white shadow-md sm:text-2xl">
             DL
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[#2F3437]">
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-[#2F3437] sm:text-2xl">
               Commande Atelier
             </h1>
-            <p className="text-sm text-[#626B72]">
+            <p className="hidden text-sm text-[#626B72] sm:block">
               Découpe Laser • Catalogue interne
             </p>
           </div>
@@ -43,18 +52,13 @@ export default function Header() {
         <nav className="hidden items-center gap-3 lg:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active =
-              pathname === item.href ||
-              (item.href !== "/" &&
-                item.href !== "/admin" &&
-                pathname.startsWith(item.href)) ||
-              (item.href === "/admin" && pathname === "/admin");
+            const active = isActive(item.href);
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-2 rounded-2xl px-5 py-3 font-medium transition-all duration-200 ${
+                className={`group flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 font-semibold transition-colors duration-200 ${
                   active
                     ? "bg-orange-50 text-[#F95516] shadow-sm"
                     : "text-[#626B72] hover:bg-slate-100 hover:text-[#F95516]"
@@ -71,14 +75,42 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <button className="rounded-2xl border border-slate-200 p-3 transition hover:border-[#F95516] hover:text-[#F95516]">
-            <Bell size={20} />
-          </button>
           <CartButton />
-          <button className="rounded-2xl border border-slate-200 p-2 transition hover:border-[#F95516] hover:text-[#F95516]">
-            <UserCircle2 size={34} />
-          </button>
+          {isAdmin && <Link
+            href="/admin"
+            aria-label="Administration"
+            title="Administration"
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2 ${
+              isActive("/admin")
+                ? "border-orange-200 bg-orange-50 text-[#F95516]"
+                : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-[#F95516]"
+            }`}
+          >
+            <Settings size={19} aria-hidden="true" />
+          </Link>}
         </div>
+
+        <nav className="grid w-full grid-cols-2 gap-2 border-t border-slate-100 pt-3 lg:hidden">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-orange-50 text-[#F95516]"
+                    : "bg-slate-50 text-slate-600 active:bg-slate-100"
+                }`}
+              >
+                <Icon size={18} />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

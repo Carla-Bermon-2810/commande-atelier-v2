@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  History,
   Minus,
   Package,
   Plus,
   Settings2,
+  Trash2,
   X,
+  XCircle,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -23,14 +24,6 @@ type Outil = {
   reference?: string | null;
   quantite: number;
   seuil_minimum: number;
-};
-
-type Mouvement = {
-  id: number;
-  type_mouvement: "reception" | "sortie" | "ajustement";
-  quantite: number;
-  commentaire: string | null;
-  date_mouvement: string;
 };
 
 const config = {
@@ -65,7 +58,6 @@ export default function StockOutillage({
   const currentConfig = config[type];
 
   const [outils, setOutils] = useState<Outil[]>([]);
-  const [mouvements, setMouvements] = useState<Mouvement[]>([]);
 
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
@@ -74,7 +66,7 @@ export default function StockOutillage({
   const [statutFiltre, setStatutFiltre] = useState("tous");
 
   const [modal, setModal] = useState<
-    "ajouter" | "reception" | "sortie" | "ajustement" | "historique" | null
+    "ajouter" | "sortie" | "ajustement" | null
   >(null);
 
   const [outilSelectionne, setOutilSelectionne] =
@@ -85,7 +77,6 @@ export default function StockOutillage({
   const [reference, setReference] = useState("");
   const [quantite, setQuantite] = useState("");
   const [seuilMinimum, setSeuilMinimum] = useState("2");
-  const [commentaire, setCommentaire] = useState("");
 
   useEffect(() => {
     chargerStock();
@@ -108,36 +99,26 @@ export default function StockOutillage({
     }
 
     setOutils((data as Outil[]) || []);
-
-    const { data: mouvementsData, error: mouvementsError } =
-      await supabase
-        .from(currentConfig.mouvementTable)
-        .select("*")
-        .order("date_mouvement", { ascending: false });
-
-    if (mouvementsError) {
-      console.error(
-        "Erreur chargement mouvements :",
-        mouvementsError
-      );
-    }
-
-    setMouvements((mouvementsData as Mouvement[]) || []);
     setChargement(false);
   }
 
   function getStatut(outil: Outil) {
-    if (outil.quantite === 0) return "Rupture";
-
-    if (outil.quantite <= outil.seuil_minimum) {
-      return "Stock faible";
+    if (outil.quantite === 0) {
+      return "rupture";
     }
 
-    return "Disponible";
+    if (outil.quantite <= outil.seuil_minimum) {
+      return "recommander";
+    }
+
+    return "ok";
   }
 
   function getPourcentage(outil: Outil) {
-    const maximum = Math.max(outil.seuil_minimum * 4, 10);
+    const maximum = Math.max(
+      outil.seuil_minimum * 4,
+      10
+    );
 
     return Math.min(
       100,
@@ -165,22 +146,17 @@ export default function StockOutillage({
     });
   }, [outils, recherche, statutFiltre]);
 
-  const disponibles = outils.filter(
-    (outil) => getStatut(outil) === "Disponible"
+  const nombreOK = outils.filter(
+    (outil) => getStatut(outil) === "ok"
   ).length;
 
-  const faibles = outils.filter(
-    (outil) => getStatut(outil) === "Stock faible"
+  const nombreRecommander = outils.filter(
+    (outil) => getStatut(outil) === "recommander"
   ).length;
 
-  const ruptures = outils.filter(
-    (outil) => getStatut(outil) === "Rupture"
+  const nombreRupture = outils.filter(
+    (outil) => getStatut(outil) === "rupture"
   ).length;
-
-  const totalPieces = outils.reduce(
-    (total, outil) => total + outil.quantite,
-    0
-  );
 
   function fermerModal() {
     setModal(null);
@@ -190,7 +166,6 @@ export default function StockOutillage({
     setReference("");
     setQuantite("");
     setSeuilMinimum("2");
-    setCommentaire("");
     setErreur("");
   }
 
@@ -199,18 +174,9 @@ export default function StockOutillage({
     setModal("ajouter");
   }
 
-  function ouvrirReception(outil: Outil) {
-    setOutilSelectionne(outil);
-    setQuantite("");
-    setCommentaire("");
-    setErreur("");
-    setModal("reception");
-  }
-
   function ouvrirSortie(outil: Outil) {
     setOutilSelectionne(outil);
     setQuantite("");
-    setCommentaire("");
     setErreur("");
     setModal("sortie");
   }
@@ -218,15 +184,65 @@ export default function StockOutillage({
   function ouvrirAjustement(outil: Outil) {
     setOutilSelectionne(outil);
     setQuantite(String(outil.quantite));
-    setCommentaire("");
     setErreur("");
     setModal("ajustement");
   }
 
-  function ouvrirHistorique(outil: Outil) {
-    setOutilSelectionne(outil);
+  async function supprimerOutil(outil: Outil) {
+    const nom = nomOutil(outil);
+
+    const confirme = window.confirm(
+      `Supprimer ${nom} du stock ?\n\nCette action supprimera définitivement cette référence.`
+    );
+
+    if (!confirme) return;
+
+    setChargement(true);
     setErreur("");
-    setModal("historique");
+
+    try {
+      /*
+       * On supprime d'abord les mouvements associés.
+       * Cela évite une erreur si la table mouvements
+       * possède une clé étrangère vers le stock.
+       */
+      const { error: mouvementsError } = await supabase
+        .from(currentConfig.mouvementTable)
+        .delete()
+        .eq(currentConfig.mouvementId, outil.id);
+
+      if (mouvementsError) {
+        console.error(
+          "Erreur suppression mouvements :",
+          mouvementsError
+        );
+      }
+
+      const { error } = await supabase
+        .from(currentConfig.table)
+        .delete()
+        .eq("id", outil.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setOutils((anciens) =>
+        anciens.filter((item) => item.id !== outil.id)
+      );
+    } catch (error: any) {
+      console.error(
+        "Erreur suppression outil :",
+        error
+      );
+
+      setErreur(
+        error?.message ||
+          "Impossible de supprimer cette référence."
+      );
+    } finally {
+      setChargement(false);
+    }
   }
 
   async function ajouterReference() {
@@ -244,8 +260,13 @@ export default function StockOutillage({
 
     const seuil = Number(seuilMinimum);
 
-    if (!Number.isInteger(seuil) || seuil < 0) {
-      setErreur("Le stock minimum doit être un nombre entier.");
+    if (
+      !Number.isInteger(seuil) ||
+      seuil < 0
+    ) {
+      setErreur(
+        "Le stock minimum doit être un nombre entier."
+      );
       return;
     }
 
@@ -260,83 +281,35 @@ export default function StockOutillage({
     }
 
     if (type === "tarauds") {
-      donnees.reference = reference.trim() || null;
+      donnees.reference =
+        reference.trim() || null;
     }
 
-    const { error } = await supabase
-      .from(currentConfig.table)
-      .insert(donnees);
+    setChargement(true);
 
-    if (error) {
-      console.error("Erreur ajout référence :", error);
-      setErreur(error.message);
-      return;
+    try {
+      const { data, error } = await supabase
+        .from(currentConfig.table)
+        .insert(donnees)
+        .select()
+        .single();
+
+      if (error) {
+        setErreur(error.message);
+        return;
+      }
+
+      if (data) {
+        setOutils((anciens) => [
+          ...anciens,
+          data as Outil,
+        ]);
+      }
+
+      fermerModal();
+    } finally {
+      setChargement(false);
     }
-
-    await chargerStock();
-    fermerModal();
-  }
-
-  async function enregistrerMouvement(
-    typeMouvement: "reception" | "sortie" | "ajustement",
-    nouvelleQuantite: number,
-    quantiteMouvement: number,
-    commentaireMouvement: string
-  ) {
-    if (!outilSelectionne) return false;
-
-    const { error: stockError } = await supabase
-      .from(currentConfig.table)
-      .update({
-        quantite: nouvelleQuantite,
-      })
-      .eq("id", outilSelectionne.id);
-
-    if (stockError) {
-      setErreur(stockError.message);
-      return false;
-    }
-
-    const mouvement: Record<string, unknown> = {
-      [currentConfig.mouvementId]: outilSelectionne.id,
-      type_mouvement: typeMouvement,
-      quantite: quantiteMouvement,
-      commentaire: commentaireMouvement.trim() || null,
-    };
-
-    const { error: mouvementError } = await supabase
-      .from(currentConfig.mouvementTable)
-      .insert(mouvement);
-
-    if (mouvementError) {
-      setErreur(
-        `Le stock a été enregistré mais l'historique a échoué : ${mouvementError.message}`
-      );
-      return false;
-    }
-
-    await chargerStock();
-    fermerModal();
-
-    return true;
-  }
-
-  async function receptionner() {
-    if (!outilSelectionne) return;
-
-    const qte = Number(quantite);
-
-    if (!Number.isInteger(qte) || qte <= 0) {
-      setErreur("Indique une quantité entière supérieure à 0.");
-      return;
-    }
-
-    await enregistrerMouvement(
-      "reception",
-      outilSelectionne.quantite + qte,
-      qte,
-      commentaire || "Réception de stock"
-    );
   }
 
   async function sortirStock() {
@@ -344,24 +317,53 @@ export default function StockOutillage({
 
     const qte = Number(quantite);
 
-    if (!Number.isInteger(qte) || qte <= 0) {
-      setErreur("Indique une quantité entière supérieure à 0.");
-      return;
-    }
-
-    if (qte > outilSelectionne.quantite) {
+    if (
+      !Number.isInteger(qte) ||
+      qte <= 0
+    ) {
       setErreur(
-        `Stock insuffisant : ${outilSelectionne.quantite} pièce(s) disponible(s).`
+        "Indique une quantité entière supérieure à 0."
       );
       return;
     }
 
-    await enregistrerMouvement(
-      "sortie",
-      outilSelectionne.quantite - qte,
-      qte,
-      commentaire || "Sortie de stock"
-    );
+    if (
+      qte > outilSelectionne.quantite
+    ) {
+      setErreur(
+        `Stock insuffisant : ${outilSelectionne.quantite.toLocaleString(
+          "fr-FR"
+        )} pièce(s) disponible(s).`
+      );
+      return;
+    }
+
+    const nouveauStock =
+      outilSelectionne.quantite - qte;
+
+    setChargement(true);
+
+    try {
+      const { error } = await supabase
+        .from(currentConfig.table)
+        .update({
+          quantite: nouveauStock,
+        })
+        .eq("id", outilSelectionne.id);
+
+      if (error) {
+        setErreur(
+          "Impossible d'enregistrer la sortie : " +
+            error.message
+        );
+        return;
+      }
+
+      await chargerStock();
+      fermerModal();
+    } finally {
+      setChargement(false);
+    }
   }
 
   async function ajusterStock() {
@@ -373,25 +375,36 @@ export default function StockOutillage({
       !Number.isInteger(nouveauStock) ||
       nouveauStock < 0
     ) {
-      setErreur("Indique un stock entier valide.");
+      setErreur(
+        "Indique un stock entier valide."
+      );
       return;
     }
 
-    await enregistrerMouvement(
-      "ajustement",
-      nouveauStock,
-      Math.abs(nouveauStock - outilSelectionne.quantite),
-      commentaire ||
-        `Ajustement : ${outilSelectionne.quantite} → ${nouveauStock}`
-    );
-  }
+    setChargement(true);
 
-  const mouvementsOutil = mouvements.filter(
-    (mouvement) =>
-      mouvement[
-        currentConfig.mouvementId as keyof Mouvement
-      ] === outilSelectionne?.id
-  );
+    try {
+      const { error } = await supabase
+        .from(currentConfig.table)
+        .update({
+          quantite: nouveauStock,
+        })
+        .eq("id", outilSelectionne.id);
+
+      if (error) {
+        setErreur(
+          "Impossible d'ajuster le stock : " +
+            error.message
+        );
+        return;
+      }
+
+      await chargerStock();
+      fermerModal();
+    } finally {
+      setChargement(false);
+    }
+  }
 
   function nomOutil(outil: Outil) {
     if (type === "forets") {
@@ -399,17 +412,48 @@ export default function StockOutillage({
     }
 
     if (type === "fraises") {
-      return outil.designation || `Fraise ${outil.dimension}`;
+      return (
+        outil.designation ||
+        `Fraise ${outil.dimension}`
+      );
     }
 
     return `Taraud ${outil.dimension}`;
   }
 
+  function renderStatut(outil: Outil) {
+    const statut = getStatut(outil);
+
+    if (statut === "ok") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+          <CheckCircle2 size={14} />
+          STOCK OK
+        </span>
+      );
+    }
+
+    if (statut === "recommander") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+          <AlertTriangle size={14} />
+          À RECOMMANDER
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+        <XCircle size={14} />
+        RUPTURE
+      </span>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl p-8">
 
-      {/* HEADER */}
-
+      {/* EN-TÊTE */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -438,10 +482,17 @@ export default function StockOutillage({
         </button>
       </div>
 
-      {/* PANNEAU */}
+      {/* ERREUR */}
+      {erreur && (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <strong>Erreur :</strong> {erreur}
+        </div>
+      )}
 
+      {/* STOCK */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
+        {/* FILTRES / STATISTIQUES */}
         <div className="border-b border-slate-200 px-6 py-5">
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -455,67 +506,87 @@ export default function StockOutillage({
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Suivi des quantités disponibles dans l&apos;atelier.
+                Suivi des références et quantités
+                disponibles.
               </p>
             </div>
 
             <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">
-              {outilsFiltres.length} / {outils.length} référence(s)
+              {outilsFiltres.length} /{" "}
+              {outils.length} référence(s)
             </div>
           </div>
 
-          {/* COMPTEURS */}
+          {/* STATISTIQUES */}
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
 
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-semibold text-slate-600">
-                Références
+            <button
+              type="button"
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "ok"
+                    ? "tous"
+                    : "ok"
+                )
+              }
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-green-200"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                <CheckCircle2 size={18} />
+                Stock OK
               </div>
 
               <div className="mt-1 text-2xl font-bold text-[#2F3437]">
-                {outils.length}
+                {nombreOK}
               </div>
-            </div>
+            </button>
 
-            <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
-                <CheckCircle2 size={18} />
-                Disponibles
-              </div>
-
-              <div className="mt-1 text-2xl font-bold text-green-700">
-                {disponibles}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <button
+              type="button"
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "recommander"
+                    ? "tous"
+                    : "recommander"
+                )
+              }
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
+            >
               <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
                 <AlertTriangle size={18} />
-                Stock faible
+                À recommander
               </div>
 
-              <div className="mt-1 text-2xl font-bold text-orange-700">
-                {faibles}
+              <div className="mt-1 text-2xl font-bold text-[#2F3437]">
+                {nombreRecommander}
               </div>
-            </div>
+            </button>
 
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+            <button
+              type="button"
+              onClick={() =>
+                setStatutFiltre(
+                  statutFiltre === "rupture"
+                    ? "tous"
+                    : "rupture"
+                )
+              }
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
+            >
               <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
-                <AlertTriangle size={18} />
-                Ruptures
+                <XCircle size={18} />
+                Rupture
               </div>
 
-              <div className="mt-1 text-2xl font-bold text-red-700">
-                {ruptures}
+              <div className="mt-1 text-2xl font-bold text-[#2F3437]">
+                {nombreRupture}
               </div>
-            </div>
+            </button>
 
           </div>
 
           {/* FILTRES */}
-
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3">
 
             <input
               type="text"
@@ -523,7 +594,11 @@ export default function StockOutillage({
               onChange={(e) =>
                 setRecherche(e.target.value)
               }
-              placeholder="Rechercher..."
+              placeholder={
+                type === "fraises"
+                  ? "Rechercher une désignation..."
+                  : "Rechercher une référence..."
+              }
               className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#F95516]"
             />
 
@@ -534,42 +609,66 @@ export default function StockOutillage({
               }
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
-              <option value="tous">Tous les statuts</option>
-              <option value="Disponible">Disponible</option>
-              <option value="Stock faible">Stock faible</option>
-              <option value="Rupture">Rupture</option>
+              <option value="tous">
+                Tous les statuts
+              </option>
+
+              <option value="ok">
+                Stock OK
+              </option>
+
+              <option value="recommander">
+                À recommander
+              </option>
+
+              <option value="rupture">
+                Rupture
+              </option>
             </select>
 
-            <div className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
-              Total :{" "}
-              {totalPieces.toLocaleString("fr-FR")} pièce(s)
-            </div>
+          </div>
 
+          {/* RESET */}
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setRecherche("");
+                setStatutFiltre("tous");
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
 
         </div>
 
         {/* LISTE */}
-
         {chargement ? (
           <div className="px-6 py-16 text-center text-slate-500">
             Chargement du stock...
+          </div>
+        ) : outilsFiltres.length === 0 ? (
+          <div className="px-6 py-16 text-center text-slate-500">
+            Aucun outil ne correspond aux filtres.
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
 
             {outilsFiltres.map((outil) => {
-              const statut = getStatut(outil);
-              const pourcentage = getPourcentage(outil);
+              const pourcentage =
+                getPourcentage(outil);
 
               return (
                 <div
                   key={outil.id}
-                  className="px-6 py-6 transition hover:bg-slate-50"
+                  className="px-6 py-6 transition hover:bg-slate-50/60"
                 >
 
                   <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
 
+                    {/* INFORMATIONS */}
                     <div className="min-w-0 flex-1">
 
                       <div className="flex flex-wrap items-center gap-3">
@@ -589,20 +688,11 @@ export default function StockOutillage({
                             </span>
                           )}
 
-                        <span
-                          className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                            statut === "Disponible"
-                              ? "bg-green-50 text-green-700"
-                              : statut === "Stock faible"
-                                ? "bg-orange-50 text-orange-700"
-                                : "bg-red-50 text-red-700"
-                          }`}
-                        >
-                          {statut}
-                        </span>
+                        {renderStatut(outil)}
 
                       </div>
 
+                      {/* STOCK */}
                       <div className="mt-5 max-w-2xl">
 
                         <div className="flex items-end justify-between">
@@ -632,6 +722,7 @@ export default function StockOutillage({
 
                         </div>
 
+                        {/* BARRE */}
                         <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className="h-full rounded-full bg-[#F95516] transition-all"
@@ -641,10 +732,12 @@ export default function StockOutillage({
                           />
                         </div>
 
+                        {/* MINIMUM */}
                         <div className="mt-3 text-sm text-slate-500">
                           Minimum :{" "}
                           <strong className="text-slate-700">
-                            {outil.seuil_minimum} pièce(s)
+                            {outil.seuil_minimum}{" "}
+                            pièce(s)
                           </strong>
                         </div>
 
@@ -653,52 +746,45 @@ export default function StockOutillage({
                     </div>
 
                     {/* ACTIONS */}
+                    <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
 
-                    <div className="flex flex-wrap gap-2 xl:w-[390px] xl:justify-end">
-
+                      {/* SORTIE */}
                       <button
                         type="button"
                         onClick={() =>
                           ouvrirSortie(outil)
                         }
-                        disabled={outil.quantite === 0}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={
+                          outil.quantite === 0
+                        }
+                        className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Minus size={17} />
                         Sortie
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          ouvrirReception(outil)
-                        }
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#F95516] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e04d13]"
-                      >
-                        <Plus size={17} />
-                        Réception
-                      </button>
-
+                      {/* AJUSTER */}
                       <button
                         type="button"
                         onClick={() =>
                           ouvrirAjustement(outil)
                         }
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#F95516] hover:text-[#F95516]"
+                        className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                       >
                         <Settings2 size={17} />
                         Ajuster
                       </button>
 
+                      {/* POUBELLE */}
                       <button
                         type="button"
                         onClick={() =>
-                          ouvrirHistorique(outil)
+                          supprimerOutil(outil)
                         }
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#F95516] hover:text-[#F95516]"
+                        title="Supprimer la référence"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-white text-red-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                       >
-                        <History size={17} />
-                        Historique
+                        <Trash2 size={17} />
                       </button>
 
                     </div>
@@ -715,31 +801,26 @@ export default function StockOutillage({
       </div>
 
       {/* MODALE */}
-
       {modal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
 
           <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
 
+            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
 
               <div>
+
                 <h2 className="text-xl font-bold text-[#2F3437]">
 
                   {modal === "ajouter" &&
                     "Ajouter une référence"}
-
-                  {modal === "reception" &&
-                    "Réception de stock"}
 
                   {modal === "sortie" &&
                     "Sortie de stock"}
 
                   {modal === "ajustement" &&
                     "Ajuster le stock"}
-
-                  {modal === "historique" &&
-                    "Historique"}
 
                 </h2>
 
@@ -748,18 +829,20 @@ export default function StockOutillage({
                     {nomOutil(outilSelectionne)}
                   </p>
                 )}
+
               </div>
 
               <button
                 type="button"
                 onClick={fermerModal}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <X size={22} />
               </button>
 
             </div>
 
+            {/* CONTENU */}
             <div className="px-6 py-6">
 
               {erreur && (
@@ -769,10 +852,10 @@ export default function StockOutillage({
               )}
 
               {/* AJOUT */}
-
               {modal === "ajouter" && (
-                <div className="space-y-4">
+                <div className="space-y-5">
 
+                  {/* DIMENSION */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Dimension *
@@ -781,7 +864,9 @@ export default function StockOutillage({
                     <input
                       value={dimension}
                       onChange={(e) =>
-                        setDimension(e.target.value)
+                        setDimension(
+                          e.target.value
+                        )
                       }
                       placeholder={
                         type === "forets"
@@ -790,10 +875,11 @@ export default function StockOutillage({
                             ? "Ex. D25"
                             : "Ex. M8"
                       }
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
 
+                  {/* DESIGNATION FRAISES */}
                   {type === "fraises" && (
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -803,14 +889,17 @@ export default function StockOutillage({
                       <input
                         value={designation}
                         onChange={(e) =>
-                          setDesignation(e.target.value)
+                          setDesignation(
+                            e.target.value
+                          )
                         }
                         placeholder="Ex. FRAISE A CHANFREINER"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
                       />
                     </div>
                   )}
 
+                  {/* REFERENCE TARAUDS */}
                   {type === "tarauds" && (
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -820,14 +909,17 @@ export default function StockOutillage({
                       <input
                         value={reference}
                         onChange={(e) =>
-                          setReference(e.target.value)
+                          setReference(
+                            e.target.value
+                          )
                         }
                         placeholder="Ex. BLISTER"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
                       />
                     </div>
                   )}
 
+                  {/* SEUIL */}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Stock minimum
@@ -838,23 +930,29 @@ export default function StockOutillage({
                       min="0"
                       value={seuilMinimum}
                       onChange={(e) =>
-                        setSeuilMinimum(e.target.value)
+                        setSeuilMinimum(
+                          e.target.value
+                        )
                       }
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
                     />
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Alerte lorsque le stock passe
+                      sous ce niveau.
+                    </p>
                   </div>
 
                 </div>
               )}
 
-              {/* RECEPTION / SORTIE */}
-
-              {(modal === "reception" ||
-                modal === "sortie") &&
+              {/* SORTIE */}
+              {modal === "sortie" &&
                 outilSelectionne && (
                   <div className="space-y-5">
 
                     <div className="rounded-2xl bg-slate-50 p-4">
+
                       <div className="text-sm text-slate-500">
                         Stock actuel
                       </div>
@@ -865,6 +963,7 @@ export default function StockOutillage({
                         )}{" "}
                         pièces
                       </div>
+
                     </div>
 
                     <div>
@@ -877,34 +976,26 @@ export default function StockOutillage({
                         min="1"
                         value={quantite}
                         onChange={(e) =>
-                          setQuantite(e.target.value)
+                          setQuantite(
+                            e.target.value
+                          )
                         }
                         autoFocus
                         placeholder="Ex. 10"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg outline-none focus:border-[#F95516]"
                       />
                     </div>
-
-                    <textarea
-                      value={commentaire}
-                      onChange={(e) =>
-                        setCommentaire(e.target.value)
-                      }
-                      rows={3}
-                      placeholder="Commentaire facultatif..."
-                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                    />
 
                   </div>
                 )}
 
               {/* AJUSTEMENT */}
-
               {modal === "ajustement" &&
                 outilSelectionne && (
                   <div className="space-y-5">
 
                     <div className="rounded-2xl bg-slate-50 p-4">
+
                       <div className="text-sm text-slate-500">
                         Stock actuel
                       </div>
@@ -915,6 +1006,7 @@ export default function StockOutillage({
                         )}{" "}
                         pièces
                       </div>
+
                     </div>
 
                     <div>
@@ -927,86 +1019,14 @@ export default function StockOutillage({
                         min="0"
                         value={quantite}
                         onChange={(e) =>
-                          setQuantite(e.target.value)
+                          setQuantite(
+                            e.target.value
+                          )
                         }
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                        autoFocus
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg outline-none focus:border-[#F95516]"
                       />
                     </div>
-
-                    <textarea
-                      value={commentaire}
-                      onChange={(e) =>
-                        setCommentaire(e.target.value)
-                      }
-                      rows={3}
-                      placeholder="Motif de l'ajustement..."
-                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                    />
-
-                  </div>
-                )}
-
-              {/* HISTORIQUE */}
-
-              {modal === "historique" &&
-                outilSelectionne && (
-                  <div className="max-h-[60vh] overflow-y-auto">
-
-                    {mouvementsOutil.length === 0 ? (
-                      <div className="py-10 text-center text-slate-500">
-                        Aucun mouvement enregistré.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-
-                        {mouvementsOutil.map(
-                          (mouvement) => (
-                            <div
-                              key={mouvement.id}
-                              className="rounded-2xl border border-slate-200 p-4"
-                            >
-
-                              <div className="flex items-center justify-between">
-                                <strong className="text-[#2F3437]">
-                                  {mouvement.type_mouvement ===
-                                    "reception" &&
-                                    "📦 Réception"}
-
-                                  {mouvement.type_mouvement ===
-                                    "sortie" &&
-                                    "➖ Sortie"}
-
-                                  {mouvement.type_mouvement ===
-                                    "ajustement" &&
-                                    "⚙️ Ajustement"}
-                                </strong>
-
-                                <strong className="text-[#F95516]">
-                                  {mouvement.quantite.toLocaleString(
-                                    "fr-FR"
-                                  )}{" "}
-                                  pièce(s)
-                                </strong>
-                              </div>
-
-                              {mouvement.commentaire && (
-                                <p className="mt-2 text-sm text-slate-500">
-                                  {mouvement.commentaire}
-                                </p>
-                              )}
-
-                              <p className="mt-2 text-xs text-slate-400">
-                                {new Date(
-                                  mouvement.date_mouvement
-                                ).toLocaleString("fr-FR")}
-                              </p>
-
-                            </div>
-                          )
-                        )}
-
-                      </div>
-                    )}
 
                   </div>
                 )}
@@ -1014,60 +1034,47 @@ export default function StockOutillage({
             </div>
 
             {/* FOOTER */}
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-5">
 
-            {modal !== "historique" && (
-              <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-5">
+              <button
+                type="button"
+                onClick={fermerModal}
+                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Annuler
+              </button>
 
+              {modal === "ajouter" && (
                 <button
                   type="button"
-                  onClick={fermerModal}
-                  className="rounded-xl border border-slate-200 px-5 py-3 font-medium text-slate-600 hover:bg-slate-50"
+                  onClick={ajouterReference}
+                  className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white hover:bg-[#e04d13]"
                 >
-                  Annuler
+                  Ajouter
                 </button>
+              )}
 
-                {modal === "ajouter" && (
-                  <button
-                    type="button"
-                    onClick={ajouterReference}
-                    className="rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white hover:bg-[#e04d13]"
-                  >
-                    Ajouter
-                  </button>
-                )}
+              {modal === "sortie" && (
+                <button
+                  type="button"
+                  onClick={sortirStock}
+                  className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white hover:bg-[#e04d13]"
+                >
+                  Enregistrer
+                </button>
+              )}
 
-                {modal === "reception" && (
-                  <button
-                    type="button"
-                    onClick={receptionner}
-                    className="rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white hover:bg-[#e04d13]"
-                  >
-                    Réceptionner
-                  </button>
-                )}
+              {modal === "ajustement" && (
+                <button
+                  type="button"
+                  onClick={ajusterStock}
+                  className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white hover:bg-[#e04d13]"
+                >
+                  Enregistrer
+                </button>
+              )}
 
-                {modal === "sortie" && (
-                  <button
-                    type="button"
-                    onClick={sortirStock}
-                    className="rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white hover:bg-[#e04d13]"
-                  >
-                    Enregistrer la sortie
-                  </button>
-                )}
-
-                {modal === "ajustement" && (
-                  <button
-                    type="button"
-                    onClick={ajusterStock}
-                    className="rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white hover:bg-[#e04d13]"
-                  >
-                    Enregistrer
-                  </button>
-                )}
-
-              </div>
-            )}
+            </div>
 
           </div>
         </div>

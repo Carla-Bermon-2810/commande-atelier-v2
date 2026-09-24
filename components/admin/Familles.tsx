@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { adminData } from "@/lib/admin-api";
 
 import FamilleList from "./FamilleList";
 import FamilleForm from "./FamilleForm";
@@ -22,32 +22,11 @@ export default function Familles() {
   }, []);
 
   async function chargerFamilles() {
-    const { data, error } = await supabase
-      .from("famille")
-      .select("*")
-      .order("categorie")
-      .order("ordre");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setFamilles(data ?? []);
+    try { setFamilles(await adminData<any[]>("famille", "select", { order: "categorie" }) ?? []); } catch (error) { console.error(error); }
   }
 
   async function chargerCategories() {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .order("nom");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setCategories(data ?? []);
+    try { setCategories(await adminData<any[]>("categories", "select", { order: "nom" }) ?? []); } catch (error) { console.error(error); }
   }
 
   function nouvelleFamille() {
@@ -82,26 +61,9 @@ export default function Familles() {
 
     try {
       if (familleSelectionnee?.id) {
-        const { error } = await supabase
-          .from("famille")
-          .update({
-            famille,
-            categorie,
-            ordre,
-          })
-          .eq("id", familleSelectionnee.id);
-
-        if (error) throw error;
+        await adminData("famille", "update", { values: { famille, categorie, ordre }, filters: [{ column: "id", value: familleSelectionnee.id }] });
       } else {
-        const { error } = await supabase
-          .from("famille")
-          .insert({
-            famille,
-            categorie,
-            ordre,
-          });
-
-        if (error) throw error;
+        await adminData("famille", "insert", { values: { famille, categorie, ordre } });
       }
 
       await chargerFamilles();
@@ -128,12 +90,7 @@ export default function Familles() {
     if (!confirmation) return;
 
     try {
-      const { error } = await supabase
-        .from("famille")
-        .delete()
-        .eq("id", familleSelectionnee.id);
-
-      if (error) throw error;
+      await adminData("famille", "delete", { values: {}, filters: [{ column: "id", value: familleSelectionnee.id }] });
 
       setFamilleSelectionnee(null);
       setFamille("");

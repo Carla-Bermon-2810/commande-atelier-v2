@@ -1,317 +1,159 @@
 import { Resend } from "resend";
-import { supabase } from "@/lib/supabase";
+import { createOrderPdf } from "@/lib/order-pdf";
+import { getServerSupabase } from "@/lib/supabase-server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const runtime = "nodejs";
+
+type OrderArticle = {
+  article: string;
+  famille: string;
+  quantite: number;
+};
+
+type OrderPayload = {
+  demandeur: string;
+  commentaire: string;
+  articles: OrderArticle[];
+};
+
+function getText(value: unknown, maximum: number) {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text.length > 0 && text.length <= maximum ? text : null;
+}
+
+function parseOrder(payload: unknown): OrderPayload | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const input = payload as Record<string, unknown>;
+  const demandeur = getText(input.demandeur, 100);
+  const commentaire = typeof input.commentaire === "string"
+    ? input.commentaire.trim().slice(0, 1_000)
+    : "";
+
+  if (!demandeur || !Array.isArray(input.articles) || input.articles.length === 0 || input.articles.length > 100) {
+    return null;
+  }
+
+  const articles = input.articles.map((item): OrderArticle | null => {
+    if (!item || typeof item !== "object") return null;
+
+    const article = item as Record<string, unknown>;
+    const nom = getText(article.article, 160);
+    const famille = typeof article.famille === "string"
+      ? article.famille.trim().slice(0, 100)
+      : "";
+    const quantite = Number(article.quantite);
+
+    if (!nom || !Number.isInteger(quantite) || quantite < 1 || quantite > 10_000) {
+      return null;
+    }
+
+    return { article: nom, famille, quantite };
+  });
+
+  return articles.every((article): article is OrderArticle => article !== null)
+    ? { demandeur, commentaire, articles }
+    : null;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character] ?? character);
+}
 
 export async function POST(req: Request) {
   try {
-    const { demandeur, commentaire, articles } = await req.json();
+    const supabase = getServerSupabase();
+    const payload = parseOrder(await req.json());
 
-    if (!demandeur || !articles || articles.length === 0) {
+    if (!payload) {
       return Response.json(
-        {
-          success: false,
-          message: "Commande incomplète.",
-        },
-        {
-          status: 400,
-        }
+        { success: false, message: "Commande invalide ou incomplète." },
+        { status: 400 }
       );
     }
 
-    const numero = `CMD-${Date.now()}`;
+    const createdAt = new Date();
+    const numero = `CMD-${createdAt.getTime()}`;
+    const apiKey = process.env.RESEND_API_KEY;
+    const recipient = process.env.ORDER_RECIPIENT;
+    const sender = process.env.ORDER_SENDER;
+    const isProduction = process.env.NODE_ENV === "production";
 
-    // ==========================
-    // Création de la commande
-    // ==========================
+    if (isProduction && (!apiKey || !recipient || !sender)) {
+      console.error("Configuration e-mail de production incomplète.");
+      return Response.json(
+        { success: false, message: "Le service d'envoi des commandes n'est pas encore configuré." },
+        { status: 503 }
+      );
+    }
+
+    const totalQuantite = payload.articles.reduce((total, article) => total + article.quantite, 0);
+    const pdf = apiKey
+      ? await createOrderPdf({ ...payload, numero, createdAt })
+      : null;
 
     const { data: commande, error: errorCommande } = await supabase
       .from("commandes")
-      .insert({
-        numero,
-        demandeur,
-        commentaire,
-      })
+      .insert({ numero, demandeur: payload.demandeur, commentaire: payload.commentaire })
       .select()
       .single();
 
     if (errorCommande) {
       console.error("Erreur commande :", errorCommande);
-
-      return Response.json(
-        {
-          success: false,
-          error: errorCommande.message,
-        },
-        {
-          status: 500,
-        }
-      );
+      return Response.json({ success: false, message: "Impossible d'enregistrer la commande." }, { status: 500 });
     }
 
-    // ==========================
-    // Création des lignes
-    // ==========================
-
-    const lignes = articles.map((article: any) => ({
-      commande_id: commande.id,
-      article: article.article,
-      famille: article.famille ?? "",
-      quantite: Number(article.quantite),
-    }));
-
-    const { error: errorLignes } = await supabase
-      .from("commande_articles")
-      .insert(lignes);
-
-    if (errorLignes) {
-      console.error("Erreur lignes :", errorLignes);
-
-      return Response.json(
-        {
-          success: false,
-          error: errorLignes.message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    // ==========================
-    // Calculs
-    // ==========================
-
-    const totalArticles = articles.length;
-
-    const totalQuantite = articles.reduce(
-      (total: number, article: any) =>
-        total + Number(article.quantite),
-      0
+    const { error: errorLignes } = await supabase.from("commande_articles").insert(
+      payload.articles.map((article) => ({
+        commande_id: commande.id,
+        article: article.article,
+        famille: article.famille,
+        quantite: article.quantite,
+      }))
     );
 
-    // ==========================
-    // Email HTML
-    // ==========================
-
-    const html = `
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-    <meta charset="UTF-8">
-    </head>
-    
-    <body style="margin:0;padding:30px;background:#f4f6f8;font-family:Arial,sans-serif;">
-    
-    <table width="700" align="center" cellpadding="0" cellspacing="0"
-    style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #dcdcdc;">
-    
-    <tr>
-    <td style="background:#004B87;padding:30px;text-align:center;color:white;">
-    
-    <h1 style="margin:0;font-size:30px;">
-    📦 Nouvelle commande Atelier
-    </h1>
-    
-    <p style="margin-top:10px;font-size:16px;">
-    Découpe Laser
-    </p>
-    
-    </td>
-    </tr>
-    
-    <tr>
-    <td style="padding:30px;">
-    
-    <table width="100%" cellpadding="8">
-    
-    <tr>
-    <td width="50%">
-    
-    <b>N° Commande</b><br>
-    ${numero}
-    
-    </td>
-    
-    <td align="right">
-    
-    <b>Date</b><br>
-    ${new Date().toLocaleString("fr-FR")}
-    
-    </td>
-    </tr>
-    
-    <tr>
-    <td colspan="2">
-    
-    <br>
-    
-    <b>Demandeur</b><br>
-    
-    ${demandeur}
-    
-    </td>
-    </tr>
-    
-    </table>
-    
-    <br>
-    
-    <h2 style="color:#004B87;">
-    Articles commandés
-    </h2>
-    
-    <table width="100%" cellspacing="0" cellpadding="10" style="border-collapse:collapse;">
-    
-    <thead>
-    
-    <tr style="background:#004B87;color:white;">
-    
-    <th align="left">
-    Article
-    </th>
-    
-    <th align="left">
-    Famille
-    </th>
-    
-    <th align="center">
-    Qté
-    </th>
-    
-    </tr>
-    
-    </thead>
-    
-    <tbody>
-    
-    ${articles
-      .map(
-        (article: any) => `
-    <tr>
-    
-    <td style="border-bottom:1px solid #ddd;">
-    ${article.article}
-    </td>
-    
-    <td style="border-bottom:1px solid #ddd;">
-    ${article.famille || "-"}
-    </td>
-    
-    <td align="center" style="border-bottom:1px solid #ddd;font-weight:bold;">
-    ${article.quantite}
-    </td>
-    
-    </tr>
-    `
-      )
-      .join("")}
-    
-    </tbody>
-    
-    </table>
-    
-    <br>
-    
-    <table width="100%" style="background:#f4f4f4;padding:15px;border-radius:8px;">
-    
-    <tr>
-    
-    <td>
-    
-    <b>Nombre d'articles :</b>
-    
-    ${totalArticles}
-    
-    </td>
-    
-    <td align="right">
-    
-    <b>Quantité totale :</b>
-    
-    ${totalQuantite}
-    
-    </td>
-    
-    </tr>
-    
-    </table>
-    
-    <br>
-    
-    <h2 style="color:#004B87;">
-    Commentaire
-    </h2>
-    
-    <div style="background:#f4f4f4;padding:15px;border-left:5px solid #004B87;border-radius:6px;">
-    
-    ${commentaire || "Aucun commentaire"}
-    
-    </div>
-    
-    </td>
-    </tr>
-    
-    <tr>
-    
-    <td style="background:#ececec;padding:20px;text-align:center;font-size:13px;color:#666;">
-    
-    Commande générée automatiquement par
-    <b>Commande Atelier V2</b>
-    
-    </td>
-    
-    </tr>
-    
-    </table>
-    
-    </body>
-    </html>
-    `;
-    
-// ==========================
-// Envoi de l'email
-// ==========================
-
-const { data, error } = await resend.emails.send({
-  from: "Commande Atelier <onboarding@resend.dev>",
-  to: ["bermon.carla.dl@gmail.com"],
-  subject: `📦 Nouvelle commande Atelier - ${numero}`,
-  html,
-});
-
-if (error) {
-  console.error("Erreur Resend :", error);
-
-  return Response.json(
-    {
-      success: false,
-      error: error.message,
-    },
-    {
-      status: 500,
+    if (errorLignes) {
+      console.error("Erreur lignes de commande :", errorLignes);
+      await supabase.from("commandes").delete().eq("id", commande.id);
+      return Response.json({ success: false, message: "Impossible d'enregistrer les articles de la commande." }, { status: 500 });
     }
-  );
-}
 
-return Response.json({
-  success: true,
-  numero,
-  commandeId: commande.id,
-  data,
-});
+    let notificationSent = false;
 
-} catch (err: any) {
-  console.error("Erreur API :", err);
+    if (apiKey && pdf) {
+      const resend = new Resend(apiKey);
+      const { error: emailError } = await resend.emails.send({
+        from: sender ?? "Commande Atelier <onboarding@resend.dev>",
+        to: [recipient ?? "bermon.carla.dl@gmail.com"],
+        subject: `Nouvelle commande Atelier - ${numero}`,
+        html: `<!doctype html><html lang="fr"><body style="margin:0;padding:28px;background:#f5f7f8;font-family:Arial,sans-serif;color:#27313a;"><table width="640" align="center" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#fff;border:1px solid #dee4e8;border-radius:12px;overflow:hidden;"><tr><td style="height:4px;background:#f95516;"></td></tr><tr><td style="padding:30px 32px;"><p style="margin:0 0 8px;color:#f95516;font-size:12px;font-weight:bold;letter-spacing:1px;">DÉCOUPE LASER</p><h1 style="margin:0 0 20px;font-size:23px;line-height:1.25;">Nouvelle commande atelier</h1><p style="margin:0 0 16px;font-size:15px;line-height:1.55;">Une nouvelle commande a été enregistrée.</p><table cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.7;"><tr><td style="padding-right:22px;color:#65717c;">N° commande</td><td><strong>${numero}</strong></td></tr><tr><td style="padding-right:22px;color:#65717c;">Demandeur</td><td><strong>${escapeHtml(payload.demandeur)}</strong></td></tr><tr><td style="padding-right:22px;color:#65717c;">Date</td><td>${escapeHtml(createdAt.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }))}</td></tr><tr><td style="padding-right:22px;color:#65717c;">Commande</td><td>${payload.articles.length} ligne(s) - ${totalQuantite} unité(s)</td></tr></table><p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #dee4e8;font-size:14px;line-height:1.5;">Le détail complet est disponible dans le bon de commande PDF joint.</p></td></tr></table></body></html>`,
+        text: `Nouvelle commande atelier\n\nN° commande : ${numero}\nDemandeur : ${payload.demandeur}\nDate : ${createdAt.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" })}\n${payload.articles.length} ligne(s) - ${totalQuantite} unité(s)\n\nLe détail complet est disponible dans le bon de commande PDF joint.`,
+        attachments: [{
+          filename: `bon-de-commande-${numero}.pdf`,
+          content: pdf,
+          contentType: "application/pdf",
+        }],
+      });
 
-  return Response.json(
-  {
-    success: false,
-    message: err?.message || "Erreur serveur",
-  },
-  {
-    status: 500,
+      if (emailError) {
+        console.error("Erreur envoi email :", emailError);
+      } else {
+        notificationSent = true;
+      }
+    } else {
+      console.error("RESEND_API_KEY est absente : l'email de notification n'a pas été envoyé.");
+    }
+
+    return Response.json({ success: true, numero, commandeId: commande.id, notificationSent }, { status: 201 });
+  } catch (error) {
+    console.error("Erreur API commande :", error);
+    return Response.json({ success: false, message: "Erreur serveur lors de l'envoi de la commande." }, { status: 500 });
   }
-);
-}
 }

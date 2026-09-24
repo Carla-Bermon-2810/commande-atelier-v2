@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  History,
   Minus,
   Package,
   Plus,
   Settings,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react";
@@ -18,20 +18,10 @@ import { supabase } from "@/lib/supabase";
 type Insert = {
   id: number;
   reference: string;
-  designation: string;
   matiere: string;
   dimension: string;
   quantite: number;
   seuilMinimum: number;
-};
-
-type Mouvement = {
-  id: number;
-  insertId: number;
-  type: "reception" | "sortie" | "ajustement";
-  quantite: number;
-  commentaire: string | null;
-  date: string;
 };
 
 const insertsInitiaux = [
@@ -62,7 +52,6 @@ const matieres = ["Acier", "Inox"];
 
 export default function StockInserts() {
   const [inserts, setInserts] = useState<Insert[]>([]);
-  const [mouvements, setMouvements] = useState<Mouvement[]>([]);
 
   const [recherche, setRecherche] = useState("");
   const [matiereFiltre, setMatiereFiltre] = useState("toutes");
@@ -70,22 +59,25 @@ export default function StockInserts() {
   const [statutFiltre, setStatutFiltre] = useState("tous");
 
   const [modal, setModal] = useState<
-    "reception" | "sortie" | "ajustement" | "historique" | "ajouter" | null
+    "sortie" | "ajustement" | "ajouter" | null
   >(null);
 
   const [insertSelectionne, setInsertSelectionne] =
     useState<Insert | null>(null);
 
   const [quantite, setQuantite] = useState("");
-  const [commentaire, setCommentaire] = useState("");
 
   const [nouvelleReference, setNouvelleReference] = useState("");
-  const [nouvelleDesignation, setNouvelleDesignation] = useState("");
   const [nouvelleMatiere, setNouvelleMatiere] = useState("");
   const [nouvelleDimension, setNouvelleDimension] = useState("");
   const [nouveauSeuil, setNouveauSeuil] = useState("50");
 
-  const [historique, setHistorique] = useState<Mouvement[]>([]);
+  const [nouvellesPiecesParBoite, setNouvellesPiecesParBoite] =
+    useState("200");
+
+  const [nouvellesBoitesPleines, setNouvellesBoitesPleines] =
+    useState("1");
+
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
 
@@ -112,7 +104,6 @@ export default function StockInserts() {
     const lignes: Insert[] = (data ?? []).map((item) => ({
       id: item.id,
       reference: item.reference,
-      designation: item.designation,
       matiere: item.matiere,
       dimension: item.dimension,
       quantite: item.quantite,
@@ -123,12 +114,34 @@ export default function StockInserts() {
     setChargement(false);
   }
 
+  function getStatut(item: Insert) {
+    if (item.quantite === 0) return "rupture";
+
+    if (item.quantite <= item.seuilMinimum) {
+      return "recommander";
+    }
+
+    return "ok";
+  }
+
+  function getPourcentage(item: Insert) {
+    const maximum = Math.max(item.seuilMinimum * 4, 100);
+
+    return Math.min(
+      100,
+      Math.round((item.quantite / maximum) * 100)
+    );
+  }
+
   const insertsFiltres = useMemo(() => {
     return inserts.filter((item) => {
+      const rechercheLower = recherche.toLowerCase();
+
       const rechercheOK =
         !recherche ||
-        item.reference.toLowerCase().includes(recherche.toLowerCase()) ||
-        item.designation.toLowerCase().includes(recherche.toLowerCase());
+        item.reference.toLowerCase().includes(rechercheLower) ||
+        item.matiere.toLowerCase().includes(rechercheLower) ||
+        item.dimension.toLowerCase().includes(rechercheLower);
 
       const matiereOK =
         matiereFiltre === "toutes" ||
@@ -142,7 +155,12 @@ export default function StockInserts() {
         statutFiltre === "tous" ||
         getStatut(item) === statutFiltre;
 
-      return rechercheOK && matiereOK && dimensionOK && statutOK;
+      return (
+        rechercheOK &&
+        matiereOK &&
+        dimensionOK &&
+        statutOK
+      );
     });
   }, [
     inserts,
@@ -151,21 +169,6 @@ export default function StockInserts() {
     dimensionFiltre,
     statutFiltre,
   ]);
-
-  function getStatut(item: Insert) {
-    if (item.quantite === 0) return "rupture";
-    if (item.quantite <= item.seuilMinimum) return "recommander";
-    return "ok";
-  }
-
-  function getPourcentage(item: Insert) {
-    const maximum = Math.max(item.seuilMinimum * 4, 100);
-
-    return Math.min(
-      100,
-      Math.round((item.quantite / maximum) * 100)
-    );
-  }
 
   const nombreOK = inserts.filter(
     (item) => getStatut(item) === "ok"
@@ -179,120 +182,54 @@ export default function StockInserts() {
     (item) => getStatut(item) === "rupture"
   ).length;
 
-  const totalPieces = inserts.reduce(
-    (total, item) => total + item.quantite,
-    0
-  );
-
   function fermerModal() {
     setModal(null);
     setInsertSelectionne(null);
     setQuantite("");
-    setCommentaire("");
-    setHistorique([]);
-  }
-
-  function ouvrirReception(item: Insert) {
-    setInsertSelectionne(item);
-    setQuantite("");
-    setCommentaire("");
-    setModal("reception");
   }
 
   function ouvrirSortie(item: Insert) {
     setInsertSelectionne(item);
     setQuantite("");
-    setCommentaire("");
     setModal("sortie");
   }
 
   function ouvrirAjustement(item: Insert) {
     setInsertSelectionne(item);
     setQuantite(String(item.quantite));
-    setCommentaire("");
     setModal("ajustement");
   }
 
-  async function ouvrirHistorique(item: Insert) {
-    setInsertSelectionne(item);
-    setModal("historique");
-
-    const { data, error } = await supabase
-      .from("stock_mouvements_inserts")
-      .select("*")
-      .eq("insert_id", item.id)
-      .order("date_mouvement", { ascending: false });
-
-    if (error) {
-      console.error("Erreur historique inserts :", error);
-      setHistorique([]);
-      return;
-    }
-
-    setHistorique(
-      (data ?? []).map((mouvement) => ({
-        id: mouvement.id,
-        insertId: mouvement.insert_id,
-        type: mouvement.type_mouvement,
-        quantite: mouvement.quantite,
-        commentaire: mouvement.commentaire,
-        date: new Date(mouvement.date_mouvement).toLocaleString(
-          "fr-FR"
-        ),
-      }))
+  async function supprimerInsert(item: Insert) {
+    const confirme = window.confirm(
+      `Supprimer ${item.reference} du stock ?\n\nCette action supprimera définitivement cette référence.`
     );
-  }
 
-  async function receptionner() {
-    if (!insertSelectionne) return;
-
-    const qte = Number(quantite);
-
-    if (!qte || qte <= 0) {
-      alert("Indique une quantité supérieure à 0.");
-      return;
-    }
-
-    const nouveauStock = insertSelectionne.quantite + qte;
+    if (!confirme) return;
 
     setChargement(true);
+    setErreur("");
 
     try {
-      const { error: erreurStock } = await supabase
+      const { error } = await supabase
         .from("stock_inserts")
-        .update({
-          quantite: nouveauStock,
-        })
-        .eq("id", insertSelectionne.id);
+        .delete()
+        .eq("id", item.id);
 
-      if (erreurStock) {
-        alert(
-          "Impossible d'enregistrer la réception : " +
-            erreurStock.message
-        );
-        return;
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const { error: erreurMouvement } = await supabase
-        .from("stock_mouvements_inserts")
-        .insert({
-          insert_id: insertSelectionne.id,
-          type_mouvement: "reception",
-          quantite: qte,
-          commentaire:
-            commentaire || "Réception de stock",
-        });
+      setInserts((anciens) =>
+        anciens.filter((insert) => insert.id !== item.id)
+      );
+    } catch (error: any) {
+      console.error("Erreur suppression insert :", error);
 
-      if (erreurMouvement) {
-        alert(
-          "Le stock a été enregistré mais l'historique a échoué : " +
-            erreurMouvement.message
-        );
-        return;
-      }
-
-      await chargerInserts();
-      fermerModal();
+      setErreur(
+        error?.message ||
+          "Impossible de supprimer cette référence."
+      );
     } finally {
       setChargement(false);
     }
@@ -303,52 +240,37 @@ export default function StockInserts() {
 
     const qte = Number(quantite);
 
-    if (!qte || qte <= 0) {
-      alert("Indique une quantité supérieure à 0.");
+    if (!qte || qte <= 0 || !Number.isInteger(qte)) {
+      alert("Indique une quantité entière supérieure à 0.");
       return;
     }
 
     if (qte > insertSelectionne.quantite) {
       alert(
-        `Stock insuffisant : ${insertSelectionne.quantite} pièce(s) disponible(s).`
+        `Stock insuffisant : ${insertSelectionne.quantite.toLocaleString(
+          "fr-FR"
+        )} pièce(s) disponible(s).`
       );
       return;
     }
 
-    const nouveauStock = insertSelectionne.quantite - qte;
+    const nouveauStock =
+      insertSelectionne.quantite - qte;
 
     setChargement(true);
 
     try {
-      const { error: erreurStock } = await supabase
+      const { error } = await supabase
         .from("stock_inserts")
         .update({
           quantite: nouveauStock,
         })
         .eq("id", insertSelectionne.id);
 
-      if (erreurStock) {
+      if (error) {
         alert(
           "Impossible d'enregistrer la sortie : " +
-            erreurStock.message
-        );
-        return;
-      }
-
-      const { error: erreurMouvement } = await supabase
-        .from("stock_mouvements_inserts")
-        .insert({
-          insert_id: insertSelectionne.id,
-          type_mouvement: "sortie",
-          quantite: qte,
-          commentaire:
-            commentaire || "Sortie de stock",
-        });
-
-      if (erreurMouvement) {
-        alert(
-          "Le stock a été enregistré mais l'historique a échoué : " +
-            erreurMouvement.message
+            error.message
         );
         return;
       }
@@ -377,35 +299,17 @@ export default function StockInserts() {
     setChargement(true);
 
     try {
-      const { error: erreurStock } = await supabase
+      const { error } = await supabase
         .from("stock_inserts")
         .update({
           quantite: nouveauStock,
         })
         .eq("id", insertSelectionne.id);
 
-      if (erreurStock) {
+      if (error) {
         alert(
           "Impossible d'ajuster le stock : " +
-            erreurStock.message
-        );
-        return;
-      }
-
-      const { error: erreurMouvement } = await supabase
-        .from("stock_mouvements_inserts")
-        .insert({
-          insert_id: insertSelectionne.id,
-          type_mouvement: "ajustement",
-          quantite: nouveauStock,
-          commentaire:
-            commentaire || "Ajustement du stock",
-        });
-
-      if (erreurMouvement) {
-        alert(
-          "Le stock a été enregistré mais l'historique a échoué : " +
-            erreurMouvement.message
+            error.message
         );
         return;
       }
@@ -418,36 +322,78 @@ export default function StockInserts() {
   }
 
   async function creerReference() {
-    if (!nouvelleReference || !nouvelleDesignation) {
-      alert("La référence et la désignation sont obligatoires.");
+    if (!nouvelleReference.trim()) {
+      alert("La référence est obligatoire.");
       return;
     }
 
     if (!nouvelleMatiere || !nouvelleDimension) {
-      alert("La matière et la dimension sont obligatoires.");
+      alert(
+        "La matière et la dimension sont obligatoires."
+      );
       return;
     }
 
+    const piecesParBoite = Number(
+      nouvellesPiecesParBoite
+    );
+
+    const boitesPleines = Number(
+      nouvellesBoitesPleines
+    );
+
     const seuil = Number(nouveauSeuil);
 
-    if (Number.isNaN(seuil) || seuil < 0) {
+    if (
+      piecesParBoite <= 0 ||
+      !Number.isInteger(piecesParBoite)
+    ) {
+      alert(
+        "Le nombre de pièces par boîte doit être valide."
+      );
+      return;
+    }
+
+    if (
+      boitesPleines < 0 ||
+      !Number.isInteger(boitesPleines)
+    ) {
+      alert(
+        "Le nombre de boîtes pleines doit être valide."
+      );
+      return;
+    }
+
+    if (
+      Number.isNaN(seuil) ||
+      seuil < 0 ||
+      !Number.isInteger(seuil)
+    ) {
       alert("Le stock minimum doit être valide.");
       return;
     }
 
+    const quantiteInitiale =
+      piecesParBoite * boitesPleines;
+
     setChargement(true);
 
     try {
-      const { error } = await supabase
+      const {
+        data: nouvelInsert,
+        error,
+      } = await supabase
         .from("stock_inserts")
         .insert({
           reference: nouvelleReference.trim(),
-          designation: nouvelleDesignation.trim(),
+          designation: nouvelleReference.trim(),
           matiere: nouvelleMatiere,
           dimension: nouvelleDimension,
-          quantite: 0,
+          quantite: quantiteInitiale,
           seuil_minimum: seuil,
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         alert(
@@ -457,12 +403,25 @@ export default function StockInserts() {
         return;
       }
 
-      await chargerInserts();
+      if (nouvelInsert) {
+        setInserts((anciens) => [
+          ...anciens,
+          {
+            id: nouvelInsert.id,
+            reference: nouvelInsert.reference,
+            matiere: nouvelInsert.matiere,
+            dimension: nouvelInsert.dimension,
+            quantite: nouvelInsert.quantite,
+            seuilMinimum: nouvelInsert.seuil_minimum,
+          },
+        ]);
+      }
 
       setNouvelleReference("");
-      setNouvelleDesignation("");
       setNouvelleMatiere("");
       setNouvelleDimension("");
+      setNouvellesPiecesParBoite("200");
+      setNouvellesBoitesPleines("1");
       setNouveauSeuil("50");
 
       fermerModal();
@@ -548,6 +507,8 @@ export default function StockInserts() {
 
   return (
     <div className="mx-auto max-w-7xl p-8">
+
+      {/* EN-TÊTE */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -562,7 +523,8 @@ export default function StockInserts() {
           </div>
 
           <p className="mt-2 text-slate-500">
-            Gestion des inserts disponibles dans l&apos;atelier
+            Gestion des inserts disponibles dans
+            l&apos;atelier
           </p>
         </div>
 
@@ -576,12 +538,14 @@ export default function StockInserts() {
         </button>
       </div>
 
+      {/* ERREUR */}
       {erreur && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <strong>Erreur :</strong> {erreur}
         </div>
       )}
 
+      {/* AUCUNE RÉFÉRENCE */}
       {inserts.length === 0 && !chargement && (
         <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
           <div className="flex items-center justify-between gap-4">
@@ -591,8 +555,8 @@ export default function StockInserts() {
               </div>
 
               <p className="mt-1 text-sm text-slate-600">
-                Tu peux importer les références et quantités
-                de ton tableau initial.
+                Tu peux importer les références
+                et quantités de ton tableau initial.
               </p>
             </div>
 
@@ -607,8 +571,12 @@ export default function StockInserts() {
         </div>
       )}
 
+      {/* STOCK */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+
+        {/* FILTRES / STATISTIQUES */}
         <div className="border-b border-slate-200 px-6 py-5">
+
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-bold text-[#2F3437]">
@@ -616,16 +584,20 @@ export default function StockInserts() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Suivi des références et quantités disponibles.
+                Suivi des références et quantités
+                disponibles.
               </p>
             </div>
 
             <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">
-              {insertsFiltres.length} / {inserts.length} référence(s)
+              {insertsFiltres.length} /{" "}
+              {inserts.length} référence(s)
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
+          {/* STATISTIQUES */}
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+
             <button
               type="button"
               onClick={() => setStatutFiltre("ok")}
@@ -643,7 +615,9 @@ export default function StockInserts() {
 
             <button
               type="button"
-              onClick={() => setStatutFiltre("recommander")}
+              onClick={() =>
+                setStatutFiltre("recommander")
+              }
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
@@ -658,7 +632,9 @@ export default function StockInserts() {
 
             <button
               type="button"
-              onClick={() => setStatutFiltre("rupture")}
+              onClick={() =>
+                setStatutFiltre("rupture")
+              }
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
             >
               <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -671,19 +647,10 @@ export default function StockInserts() {
               </div>
             </button>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                <Package size={18} />
-                Total pièces
-              </div>
-
-              <div className="mt-1 text-2xl font-bold text-[#2F3437]">
-                {totalPieces.toLocaleString("fr-FR")}
-              </div>
-            </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {/* FILTRES */}
+          <div className="mt-5 grid grid-cols-4 gap-3">
             <input
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
@@ -693,9 +660,7 @@ export default function StockInserts() {
 
             <select
               value={matiereFiltre}
-              onChange={(e) =>
-                setMatiereFiltre(e.target.value)
-              }
+              onChange={(e) => setMatiereFiltre(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
               <option value="toutes">Toutes les matières</option>
@@ -709,9 +674,7 @@ export default function StockInserts() {
 
             <select
               value={dimensionFiltre}
-              onChange={(e) =>
-                setDimensionFiltre(e.target.value)
-              }
+              onChange={(e) => setDimensionFiltre(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
               <option value="toutes">Toutes les dimensions</option>
@@ -725,39 +688,39 @@ export default function StockInserts() {
 
             <select
               value={statutFiltre}
-              onChange={(e) =>
-                setStatutFiltre(e.target.value)
-              }
+              onChange={(e) => setStatutFiltre(e.target.value)}
               className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#F95516]"
             >
               <option value="tous">Tous les statuts</option>
               <option value="ok">Stock OK</option>
-              <option value="recommander">
-                À recommander
-              </option>
+              <option value="recommander">À recommander</option>
               <option value="rupture">Rupture</option>
             </select>
           </div>
 
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => {
-                setRecherche("");
-                setMatiereFiltre("toutes");
-                setDimensionFiltre("toutes");
-                setStatutFiltre("tous");
-              }}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              Réinitialiser les filtres
-            </button>
-          </div>
-        </div>
+            {/* RESET */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecherche("");
+                  setMatiereFiltre("toutes");
+                  setDimensionFiltre("toutes");
+                  setStatutFiltre("tous");
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
+            </div>
 
+        {/* LISTE DES INSERTS */}
         <div className="divide-y divide-slate-100">
+
           {insertsFiltres.map((item) => {
-            const pourcentage = getPourcentage(item);
+            const pourcentage =
+              getPourcentage(item);
 
             return (
               <div
@@ -765,34 +728,40 @@ export default function StockInserts() {
                 className="px-6 py-6 transition hover:bg-slate-50/60"
               >
                 <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+
+                  {/* INFORMATIONS */}
                   <div className="min-w-0 flex-1">
+
                     <div className="flex flex-wrap items-center gap-3">
                       <h3 className="text-lg font-bold text-[#2F3437]">
-                        {item.designation}
+                        {item.reference}
                       </h3>
 
                       {renderStatut(item)}
                     </div>
 
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
-                      <span>
-                        Réf.{" "}
-                        <strong>{item.reference}</strong>
-                      </span>
 
                       <span>
                         Matière :{" "}
-                        <strong>{item.matiere}</strong>
+                        <strong>
+                          {item.matiere}
+                        </strong>
                       </span>
 
                       <span>
                         Dimension :{" "}
-                        <strong>{item.dimension}</strong>
+                        <strong>
+                          {item.dimension}
+                        </strong>
                       </span>
                     </div>
 
+                    {/* STOCK */}
                     <div className="mt-5 max-w-2xl">
+
                       <div className="flex items-end justify-between">
+
                         <div>
                           <div className="text-sm font-semibold text-slate-600">
                             Stock
@@ -817,6 +786,7 @@ export default function StockInserts() {
                         </div>
                       </div>
 
+                      {/* BARRE */}
                       <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
                         <div
                           className="h-full rounded-full bg-[#F95516] transition-all"
@@ -835,71 +805,79 @@ export default function StockInserts() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 xl:w-[390px] xl:justify-end">
+                  {/* ACTIONS */}
+                  <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
+
+                    {/* SORTIE */}
                     <button
                       type="button"
-                      onClick={() => ouvrirSortie(item)}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                      onClick={() =>
+                        ouvrirSortie(item)
+                      }
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                     >
                       <Minus size={17} />
                       Sortie
                     </button>
 
+                    {/* AJUSTER */}
                     <button
                       type="button"
-                      onClick={() => ouvrirReception(item)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#F95516] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e04d13]"
-                    >
-                      <Plus size={17} />
-                      Réception
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => ouvrirAjustement(item)}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      onClick={() =>
+                        ouvrirAjustement(item)
+                      }
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       <Settings size={17} />
                       Ajuster
                     </button>
 
+                    {/* POUBELLE */}
                     <button
                       type="button"
-                      onClick={() => ouvrirHistorique(item)}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      onClick={() =>
+                        supprimerInsert(item)
+                      }
+                      title="Supprimer la référence"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-white text-red-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                     >
-                      <History size={17} />
-                      Historique
+                      <Trash2 size={17} />
                     </button>
+
                   </div>
                 </div>
               </div>
             );
           })}
+
         </div>
       </div>
 
+      {/* MODALE */}
       {modal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+
           <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
+
+            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+
               <div>
                 <h2 className="text-xl font-bold text-[#2F3437]">
+
                   {modal === "ajouter" &&
                     "Ajouter une référence"}
-                  {modal === "reception" &&
-                    "Réception de stock"}
+
                   {modal === "sortie" &&
                     "Sortie de stock"}
+
                   {modal === "ajustement" &&
                     "Ajuster le stock"}
-                  {modal === "historique" &&
-                    "Historique"}
+
                 </h2>
 
                 {insertSelectionne && (
                   <p className="mt-1 text-sm text-slate-500">
-                    {insertSelectionne.designation} —{" "}
                     {insertSelectionne.reference}
                   </p>
                 )}
@@ -912,71 +890,139 @@ export default function StockInserts() {
               >
                 <X size={22} />
               </button>
+
             </div>
 
+            {/* AJOUTER */}
             {modal === "ajouter" && (
-              <div className="space-y-4 px-6 py-6">
-                <input
-                  value={nouvelleReference}
-                  onChange={(e) =>
-                    setNouvelleReference(e.target.value)
-                  }
-                  placeholder="Référence — ex. ACRC"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                />
+              <div className="space-y-5 px-6 py-6">
 
-                <input
-                  value={nouvelleDesignation}
-                  onChange={(e) =>
-                    setNouvelleDesignation(e.target.value)
-                  }
-                  placeholder="Désignation"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                />
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Référence *
+                  </label>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <select
-                    value={nouvelleMatiere}
+                  <input
+                    value={nouvelleReference}
                     onChange={(e) =>
-                      setNouvelleMatiere(e.target.value)
+                      setNouvelleReference(
+                        e.target.value
+                      )
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-[#F95516]"
-                  >
-                    <option value="">Matière</option>
+                    placeholder="Ex. ACRC"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
 
-                    {matieres.map((matiere) => (
-                      <option
-                        key={matiere}
-                        value={matiere}
-                      >
-                        {matiere}
+                <div className="grid gap-4 md:grid-cols-2">
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Matière
+                    </label>
+
+                    <select
+                      value={nouvelleMatiere}
+                      onChange={(e) =>
+                        setNouvelleMatiere(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
+                    >
+                      <option value="">
+                        Non renseignée
                       </option>
-                    ))}
-                  </select>
 
-                  <select
-                    value={nouvelleDimension}
-                    onChange={(e) =>
-                      setNouvelleDimension(e.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-[#F95516]"
-                  >
-                    <option value="">Dimension</option>
+                      {matieres.map((matiere) => (
+                        <option
+                          key={matiere}
+                          value={matiere}
+                        >
+                          {matiere}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                    {dimensions.map((dimension) => (
-                      <option
-                        key={dimension}
-                        value={dimension}
-                      >
-                        {dimension}
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Dimension
+                    </label>
+
+                    <select
+                      value={nouvelleDimension}
+                      onChange={(e) =>
+                        setNouvelleDimension(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
+                    >
+                      <option value="">
+                        Dimension
                       </option>
-                    ))}
-                  </select>
+
+                      {dimensions.map((dimension) => (
+                        <option
+                          key={dimension}
+                          value={dimension}
+                        >
+                          {dimension}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Pièces / boîte
+                    </label>
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={
+                        nouvellesPiecesParBoite
+                      }
+                      onChange={(e) =>
+                        setNouvellesPiecesParBoite(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      Boîtes pleines
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={
+                        nouvellesBoitesPleines
+                      }
+                      onChange={(e) =>
+                        setNouvellesBoitesPleines(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
+                    />
+                  </div>
+
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">
-                    Stock minimum
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Seuil de stock
                   </label>
 
                   <input
@@ -984,14 +1030,38 @@ export default function StockInserts() {
                     min="0"
                     value={nouveauSeuil}
                     onChange={(e) =>
-                      setNouveauSeuil(e.target.value)
+                      setNouveauSeuil(
+                        e.target.value
+                      )
                     }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100"
                   />
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Alerte lorsque le stock passe
+                    sous ce niveau.
+                  </p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="rounded-2xl bg-orange-50 p-4 text-sm text-orange-800">
+                  Quantité totale :{" "}
+                  <strong>
+                    {(
+                      Number(
+                        nouvellesPiecesParBoite || 0
+                      ) *
+                      Number(
+                        nouvellesBoitesPleines || 0
+                      )
+                    ).toLocaleString("fr-FR")}{" "}
+                    pièce(s)
+                  </strong>
+                </div>
+
+                <div className="flex justify-end gap-3">
+
                   <button
+                    type="button"
                     onClick={fermerModal}
                     className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
                   >
@@ -999,20 +1069,23 @@ export default function StockInserts() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={creerReference}
                     className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white"
                   >
                     Créer
                   </button>
+
                 </div>
               </div>
             )}
 
-            {(modal === "reception" ||
-              modal === "sortie" ||
+            {/* SORTIE / AJUSTEMENT */}
+            {(modal === "sortie" ||
               modal === "ajustement") &&
               insertSelectionne && (
                 <div className="space-y-5 px-6 py-6">
+
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <div className="text-sm text-slate-500">
                       Stock actuel
@@ -1038,7 +1111,9 @@ export default function StockInserts() {
                       min="0"
                       value={quantite}
                       onChange={(e) =>
-                        setQuantite(e.target.value)
+                        setQuantite(
+                          e.target.value
+                        )
                       }
                       autoFocus
                       placeholder="Ex. 250"
@@ -1046,22 +1121,10 @@ export default function StockInserts() {
                     />
                   </div>
 
-                  <textarea
-                    value={commentaire}
-                    onChange={(e) =>
-                      setCommentaire(e.target.value)
-                    }
-                    rows={3}
-                    placeholder={
-                      modal === "ajustement"
-                        ? "Motif de l'ajustement"
-                        : "Commentaire facultatif"
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#F95516]"
-                  />
-
                   <div className="flex justify-end gap-3">
+
                     <button
+                      type="button"
                       onClick={fermerModal}
                       className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
                     >
@@ -1069,72 +1132,21 @@ export default function StockInserts() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={
-                        modal === "reception"
-                          ? receptionner
-                          : modal === "sortie"
-                            ? sortirStock
-                            : ajusterStock
+                        modal === "sortie"
+                          ? sortirStock
+                          : ajusterStock
                       }
                       className="rounded-xl bg-[#F95516] px-5 py-3 text-sm font-semibold text-white"
                     >
                       Enregistrer
                     </button>
+
                   </div>
                 </div>
               )}
 
-            {modal === "historique" &&
-              insertSelectionne && (
-                <div className="max-h-[60vh] overflow-y-auto px-6 py-6">
-                  {historique.length === 0 ? (
-                    <div className="py-8 text-center text-slate-500">
-                      Aucun mouvement pour cette référence.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {historique.map((mouvement) => (
-                        <div
-                          key={mouvement.id}
-                          className="rounded-2xl border border-slate-200 p-4"
-                        >
-                          <div className="flex justify-between gap-4">
-                            <strong>
-                              {mouvement.type ===
-                                "reception" &&
-                                "📦 Réception"}
-
-                              {mouvement.type === "sortie" &&
-                                "➖ Sortie"}
-
-                              {mouvement.type ===
-                                "ajustement" &&
-                                "⚙️ Ajustement"}
-                            </strong>
-
-                            <strong className="text-[#F95516]">
-                              {mouvement.quantite.toLocaleString(
-                                "fr-FR"
-                              )}{" "}
-                              pièces
-                            </strong>
-                          </div>
-
-                          {mouvement.commentaire && (
-                            <p className="mt-2 text-sm text-slate-500">
-                              {mouvement.commentaire}
-                            </p>
-                          )}
-
-                          <p className="mt-2 text-xs text-slate-400">
-                            {mouvement.date}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
           </div>
         </div>
       )}

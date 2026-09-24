@@ -49,6 +49,12 @@
 }
 
 :root {
+  --atelier-orange: #f95516;
+  --atelier-orange-soft: #fff3ed;
+  --atelier-ink: #27313a;
+  --atelier-muted: #65717c;
+  --atelier-line: #dfe4e8;
+  --atelier-canvas: #f5f7f8;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -137,9 +143,11 @@ html {
 }
 
 body {
-  background: #f5f6f8;
-  color: #2f3437;
-  font-family: "Nunito Sans", sans-serif;
+  background:
+    radial-gradient(circle at 88% -10%, rgba(249, 85, 22, .075), transparent 29rem),
+    #f5f7f8;
+  color: var(--atelier-ink);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Titres */
@@ -150,7 +158,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: #2f3437;
+  color: var(--atelier-ink);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -190,8 +198,11 @@ img {
 
 /* Boutons */
 
-button {
-  transition: all .25s ease;
+button,
+a {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: .18s;
+  transition-timing-function: ease;
 }
 
 /* Inputs */
@@ -199,7 +210,10 @@ button {
 input,
 select,
 textarea {
-  transition: all .2s ease;
+  border-color: #d8dfe4;
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: .18s;
+  transition-timing-function: ease;
 }
 
 input:focus,
@@ -209,23 +223,36 @@ textarea:focus {
   box-shadow: 0 0 0 4px rgba(249, 85, 22, .12);
 }
 
-/* Liens */
+/* Focus visible, utile au clavier comme sur les écrans tactiles avec accessoires. */
 
-a {
-  transition: all .2s ease;
+:focus-visible {
+  outline: 3px solid rgba(249, 85, 22, .36);
+  outline-offset: 3px;
 }
 
 /* Cartes */
 
 .card-industrie {
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  transition: .25s;
+  border: 1px solid var(--atelier-line);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(30, 41, 59, .03);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .card-industrie:hover {
   border-color: #f95516;
-  box-shadow: 0 15px 40px rgba(0,0,0,.08);
-  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(30,41,59,.08);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

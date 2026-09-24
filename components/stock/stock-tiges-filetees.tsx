@@ -678,7 +678,7 @@ export default function StockTigesFiletees() {
           </div>
 
           <div className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-semibold text-[#F95516]">
-          {nombreDisponiblesFiltres} / {nombreDisponibles}
+          {nombreDisponiblesFiltres} / {nombreDisponibles} tige(s)
           </div>
         </div>
 

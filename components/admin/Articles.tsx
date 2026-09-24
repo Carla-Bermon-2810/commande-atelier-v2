@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { adminData } from "@/lib/admin-api";
 
 import ArticleList from "./ArticleList";
 import AdminArticleCard from "./AdminArticleCard";
@@ -37,45 +37,15 @@ export default function Articles() {
   }
 
   async function chargerArticles() {
-    const { data, error } = await supabase
-      .from("catalogue")
-      .select("*")
-      .order("produit");
-
-    if (error) {
-      console.error("Erreur articles :", error);
-      return;
-    }
-
-    setArticles(data || []);
+    try { setArticles(await adminData<any[]>("catalogue", "select", { order: "produit" }) ?? []); } catch (error) { console.error("Erreur articles :", error); }
   }
 
   async function chargerCategories() {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .order("ordre");
-
-    if (error) {
-      console.error("Erreur catégories :", error);
-      return;
-    }
-
-    setCategories(data || []);
+    try { setCategories(await adminData<any[]>("categories", "select", { order: "ordre" }) ?? []); } catch (error) { console.error("Erreur catégories :", error); }
   }
 
   async function chargerFamilles() {
-    const { data, error } = await supabase
-      .from("famille")
-      .select("*")
-      .order("famille");
-
-    if (error) {
-      console.error("Erreur familles :", error);
-      return;
-    }
-
-    setFamilles(data || []);
+    try { setFamilles(await adminData<any[]>("famille", "select", { order: "famille" }) ?? []); } catch (error) { console.error("Erreur familles :", error); }
   }
 
   // ===========================
@@ -154,6 +124,10 @@ export default function Articles() {
       =========================== */}
 
       <div className="h-full overflow-y-auto rounded-xl border bg-white p-6 shadow-sm">
+
+        <p className="mb-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Chaque référence est modifiable ou supprimable individuellement. Après votre inventaire, vous pourrez donc corriger ou retirer sans difficulté les références ajoutées pour les essais.
+        </p>
 
         {/* Filtre photo */}
 

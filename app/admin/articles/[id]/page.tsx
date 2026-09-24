@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { adminData } from "@/lib/admin-api";
 
 import ArticleForm from "@/components/admin/ArticleForm";
 
@@ -25,33 +25,20 @@ export default function ArticlePage() {
   async function chargerDonnees() {
     setLoading(true);
 
-    const [articleRes, categoriesRes, famillesRes] = await Promise.all([
-      supabase
-        .from("catalogue")
-        .select("*")
-        .eq("id", id)
-        .single(),
-
-      supabase
-        .from("categories")
-        .select("*")
-        .order("ordre"),
-
-      supabase
-        .from("famille")
-        .select("*")
-        .order("famille"),
+    const [articles, categoriesRes, famillesRes] = await Promise.all([
+      adminData<any[]>("catalogue", "select", { filters: [{ column: "id", value: Number(id) }] }),
+      adminData<any[]>("categories", "select", { order: "ordre" }),
+      adminData<any[]>("famille", "select", { order: "famille" }),
     ]);
-
-    if (articleRes.error) {
-      console.error(articleRes.error);
+    const articleRes = articles?.[0];
+    if (!articleRes) {
       router.push("/admin/articles/nouveau");
       return;
     }
 
-    setArticle(articleRes.data);
-    setCategories(categoriesRes.data || []);
-    setFamilles(famillesRes.data || []);
+    setArticle(articleRes);
+    setCategories(categoriesRes || []);
+    setFamilles(famillesRes || []);
 
     setLoading(false);
   }
@@ -73,12 +60,9 @@ export default function ArticlePage() {
   }
 
   async function enregistrerArticle(data: any) {
-    const { error } = await supabase
-      .from("catalogue")
-      .update(data)
-      .eq("id", id);
-  
-    if (error) {
+    try {
+      await adminData("catalogue", "update", { values: data, filters: [{ column: "id", value: Number(id) }] });
+    } catch (error) {
       console.error(error);
       alert("Erreur lors de l'enregistrement.");
       return;
@@ -91,12 +75,9 @@ export default function ArticlePage() {
   async function supprimerArticle() {
     if (!confirm("Supprimer cet article ?")) return;
   
-    const { error } = await supabase
-      .from("catalogue")
-      .delete()
-      .eq("id", id);
-  
-    if (error) {
+    try {
+      await adminData("catalogue", "delete", { values: {}, filters: [{ column: "id", value: Number(id) }] });
+    } catch (error) {
       console.error(error);
       alert("Erreur lors de la suppression.");
       return;

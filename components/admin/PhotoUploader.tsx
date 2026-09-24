@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 type Props = {
   articleId: number;
@@ -24,8 +23,8 @@ export default function PhotoUploader({
     setCurrentPhoto(photo);
   }, [photo]);
 
-  const imageUrl = currentPhoto
-    ? `${supabase.storage.from("photos").getPublicUrl(currentPhoto).data.publicUrl}?t=${Date.now()}`
+  const imageUrl = currentPhoto && process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/photos/${currentPhoto}?t=${Date.now()}`
     : null;
 
   async function upload(file: File) {
@@ -34,43 +33,19 @@ export default function PhotoUploader({
     try {
       setLoading(true);
 
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const chemin = `catalogue/${articleId}.${extension}`;
-
-      // Upload dans le bucket
-      const { error: uploadError } = await supabase.storage
-        .from("photos")
-        .upload(chemin, file, {
-          upsert: true,
-        });
-
-      if (uploadError) {
-        alert(uploadError.message);
+      const formData = new FormData();
+      formData.set("articleId", String(articleId));
+      formData.set("file", file);
+      const response = await fetch("/api/admin/upload", { method: "POST", body: formData });
+      const result = await response.json() as { photo?: string; message?: string };
+      if (!response.ok || !result.photo) {
+        alert(result.message ?? "Impossible d'enregistrer l'image.");
         return;
       }
 
-      // Mise à jour de la base
-      const { data, error } = await supabase
-        .from("catalogue")
-        .update({
-          photo: chemin,
-        })
-        .eq("id", articleId)
-        .select();
-
-      console.log("ARTICLE ID :", articleId);
-      console.log("CHEMIN :", chemin);
-      console.log("DATA :", data);
-      console.log("ERROR :", error);
-
-if (error) {
-  alert(error.message);
-  return;
-}
-
       // Mise à jour de l'interface
-      setCurrentPhoto(chemin);
-      onUploaded(chemin);
+      setCurrentPhoto(result.photo);
+      onUploaded(result.photo);
     } finally {
       setLoading(false);
     }
