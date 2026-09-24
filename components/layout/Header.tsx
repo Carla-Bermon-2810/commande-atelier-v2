@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ClipboardList,
@@ -17,7 +17,6 @@ import CartButton from "@/components/panier/CartButton";
 
 export default function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
 
@@ -47,7 +46,7 @@ export default function Header() {
   const submitGlobalSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = globalSearch.trim();
-    router.push(query ? `/?q=${encodeURIComponent(query)}` : "/");
+    window.location.assign(query ? `/?q=${encodeURIComponent(query)}` : "/");
   };
 
   return (

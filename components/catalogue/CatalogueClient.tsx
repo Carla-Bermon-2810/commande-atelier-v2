@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Hero from "@/components/layout/Hero";
 import SearchBar from "@/components/catalogue/SearchBar";
 import CategoryCard from "@/components/catalogue/CategoryCard";
@@ -52,8 +51,10 @@ export default function CatalogueClient({
   categories,
   catalogue,
 }: Props) {
-  const searchParams = useSearchParams();
-  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("q") ?? "";
+  });
   const [produitSelectionne, setProduitSelectionne] =
     useState<ProduitModal | null>(null);
   const [modalOuverte, setModalOuverte] = useState(false);
