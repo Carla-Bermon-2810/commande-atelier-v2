@@ -49,8 +49,11 @@
 }
 
 :root {
-  --atelier-orange: #f95516;
-  --atelier-orange-soft: #fff3ed;
+  --atelier-orange: #1e4c5e;
+  --atelier-orange-soft: #eaf1f3;
+  --atelier-copper: #a55a36;
+  --atelier-steel: #1e4c5e;
+  --atelier-steel-dark: #143a49;
   --atelier-ink: #27313a;
   --atelier-muted: #65717c;
   --atelier-line: #dfe4e8;
@@ -145,7 +148,7 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 88% -10%, rgba(249, 85, 22, .075), transparent 29rem),
+    radial-gradient(circle at 88% -10%, rgba(30, 76, 94, .11), transparent 29rem),
     #f5f7f8;
   color: var(--atelier-ink);
   font-family: Arial, Helvetica, sans-serif;
@@ -169,7 +172,7 @@ h6 {
 /* Sélection */
 
 ::selection {
-  background: #f95516;
+  background: var(--atelier-steel);
   color: white;
 }
 
@@ -222,14 +225,14 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #f95516 !important;
-  box-shadow: 0 0 0 4px rgba(249, 85, 22, .12);
+  border-color: var(--atelier-steel) !important;
+  box-shadow: 0 0 0 4px rgba(30, 76, 94, .14);
 }
 
 /* Focus visible, utile au clavier comme sur les écrans tactiles avec accessoires. */
 
 :focus-visible {
-  outline: 3px solid rgba(249, 85, 22, .36);
+  outline: 3px solid rgba(30, 76, 94, .36);
   outline-offset: 3px;
 }
 
@@ -244,10 +247,37 @@ textarea:focus {
 }
 
 .card-industrie:hover {
-  border-color: #f95516;
+  border-color: var(--atelier-steel);
   box-shadow: 0 12px 28px rgba(30,41,59,.08);
   transform: translateY(-2px);
 }
+
+/* Charte atelier : bleu acier, fonds techniques et cuivre réservé aux détails.
+   Ces règles centralisent l'ancienne couleur orange sans imposer une réécriture
+   fragile de chaque écran historique. */
+.bg-\[\#F95516\] { background-color: var(--atelier-steel) !important; }
+.text-\[\#F95516\], .\!text-\[\#F95516\] { color: var(--atelier-steel) !important; }
+.border-\[\#F95516\] { border-color: var(--atelier-steel) !important; }
+.ring-\[\#F95516\] { --tw-ring-color: var(--atelier-steel) !important; }
+.bg-\[\#F95516\]\/10 { background-color: color-mix(in srgb, var(--atelier-steel) 10%, transparent) !important; }
+.border-\[\#F95516\]\/20 { border-color: color-mix(in srgb, var(--atelier-steel) 20%, transparent) !important; }
+.hover\:bg-\[\#e04d13\]:hover,
+.hover\:bg-\[\#dd4b13\]:hover { background-color: var(--atelier-steel-dark) !important; }
+.hover\:border-\[\#F95516\]:hover { border-color: var(--atelier-steel) !important; }
+.hover\:text-\[\#F95516\]:hover { color: var(--atelier-steel) !important; }
+.focus\:border-\[\#F95516\]:focus { border-color: var(--atelier-steel) !important; }
+.focus\:ring-\[\#F95516\]:focus { --tw-ring-color: var(--atelier-steel) !important; }
+.bg-orange-50 { background-color: var(--atelier-orange-soft) !important; }
+.bg-orange-100 { background-color: #dfecef !important; }
+.border-orange-200 { border-color: #c4d8de !important; }
+.border-orange-300 { border-color: #9dbcc6 !important; }
+.hover\:bg-orange-50:hover,
+.hover\:bg-orange-100:hover { background-color: #dfecef !important; }
+.hover\:border-orange-200:hover,
+.hover\:border-orange-300:hover { border-color: #6f9eac !important; }
+
+.from-\[\#F95516\] { --tw-gradient-from: var(--atelier-steel) var(--tw-gradient-from-position) !important; }
+.to-\[\#ff7b45\] { --tw-gradient-to: #356779 var(--tw-gradient-to-position) !important; }
 
 /* Les écrans tactiles n'ont pas de survol : on évite qu'une carte reste dans
    un état intermédiaire après un appui. */

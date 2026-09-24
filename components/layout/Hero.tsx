@@ -6,12 +6,12 @@ export default function Hero() {
       <div className="absolute right-0 top-0 h-full w-80 overflow-hidden">
         <div className="absolute right-8 top-6 h-32 w-32 rotate-45 rounded-3xl border border-slate-300 opacity-30"></div>
         <div className="absolute right-28 top-32 h-20 w-20 rotate-45 rounded-2xl border border-slate-300 opacity-20"></div>
-        <div className="absolute right-2 bottom-8 h-40 w-40 rotate-45 rounded-[40px] border border-[#F95516]/20"></div>
+        <div className="absolute right-2 bottom-8 h-40 w-40 rotate-45 rounded-[40px] border border-[#1e4c5e]/20"></div>
       </div>
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
 
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#F95516] sm:text-sm sm:tracking-[0.25em]">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#a55a36] sm:text-sm sm:tracking-[0.25em]">
           Catalogue interne
         </p>
 

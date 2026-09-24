@@ -36,7 +36,7 @@ export default function Header() {
     <header className="sticky top-2 z-50 mx-auto mb-4 max-w-[1500px] px-3 sm:top-3 sm:mb-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-3 shadow-[0_8px_24px_rgba(30,41,59,0.08)] backdrop-blur sm:gap-3 sm:px-5 lg:px-6">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F95516] to-[#ff7b45] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1e4c5e] to-[#356779] text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-2xl">
             DL
           </div>
           <div className="min-w-0">
@@ -60,13 +60,13 @@ export default function Header() {
                 href={item.href}
                 className={`group flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 font-semibold transition-colors duration-200 ${
                   active
-                    ? "bg-orange-50 text-[#F95516] shadow-sm"
-                    : "text-[#626B72] hover:bg-slate-100 hover:text-[#F95516]"
+                    ? "bg-[#eaf1f3] text-[#1e4c5e] shadow-sm"
+                    : "text-[#626B72] hover:bg-slate-100 hover:text-[#1e4c5e]"
                 }`}
               >
                 <Icon
                   size={19}
-                  className="!text-[#F95516] flex-shrink-0"
+                  className="!text-[#1e4c5e] flex-shrink-0"
                 />
                 {item.label}
               </Link>
@@ -80,10 +80,10 @@ export default function Header() {
             href="/admin"
             aria-label="Administration"
             title="Administration"
-            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2 ${
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[#1e4c5e] focus:ring-offset-2 ${
               isActive("/admin")
-                ? "border-orange-200 bg-orange-50 text-[#F95516]"
-                : "border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-[#F95516]"
+                ? "border-[#c4d8de] bg-[#eaf1f3] text-[#1e4c5e]"
+                : "border-slate-200 bg-white text-slate-600 hover:border-[#c4d8de] hover:bg-[#eaf1f3] hover:text-[#1e4c5e]"
             }`}
           >
             <Settings size={19} aria-hidden="true" />
@@ -101,7 +101,7 @@ export default function Header() {
                 href={item.href}
                 className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-colors ${
                   active
-                    ? "bg-orange-50 text-[#F95516]"
+                    ? "bg-[#eaf1f3] text-[#1e4c5e]"
                     : "bg-slate-50 text-slate-600 active:bg-slate-100"
                 }`}
               >
