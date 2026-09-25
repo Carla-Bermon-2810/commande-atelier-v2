@@ -158,10 +158,12 @@ body {
 
 /* Titres */
 
-:where(h1, h2, h3, h4, h5, h6) {
-  color: var(--atelier-ink);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+@layer base {
+  :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--atelier-ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
 }
 
 /* Sélection */
