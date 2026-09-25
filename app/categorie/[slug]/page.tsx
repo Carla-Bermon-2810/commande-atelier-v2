@@ -68,8 +68,8 @@ export default async function CategoriePage({ params }: PageProps) {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl">
-            <div className="mb-6">
+      <div className="mx-auto w-full max-w-[1420px]">
+        <div className="mb-4">
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-[#F95516] hover:text-[#F95516]"
@@ -79,22 +79,22 @@ export default async function CategoriePage({ params }: PageProps) {
         </Link>
       </div>
 
-        <section className="relative mb-6 overflow-hidden rounded-xl bg-[#142026] text-white">
-          <Image src={categoryImage(categorie.nom)} alt="" fill sizes="(min-width: 1024px) 85vw, 100vw" className="object-cover object-center" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,22,28,.97),rgba(12,22,28,.75)_48%,rgba(12,22,28,.12))]" />
-          <div className="relative flex min-h-48 flex-col justify-center p-6 sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Catalogue · {categorie.nom}</p>
-            <h1 className="mt-2 text-3xl font-black uppercase text-white sm:text-4xl">{categorie.nom}</h1>
-            <p className="mt-2 text-sm text-slate-200">Choisissez une famille pour voir ses produits.</p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2"><FolderOpen size={15} />{familles?.length ?? 0} familles</span>
-              <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2"><PackageSearch size={15} />{nbReferences ?? 0} références</span>
+        <section className="relative mb-5 overflow-hidden rounded-xl bg-[#142026] text-white shadow-sm">
+          <Image src={categoryImage(categorie.nom)} alt="" fill sizes="(min-width: 1024px) 85vw, 100vw" className="object-cover object-center" priority />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,22,28,.98)_0%,rgba(12,22,28,.86)_23%,rgba(12,22,28,.57)_48%,rgba(12,22,28,.08)_100%)]" />
+          <div className="relative flex min-h-[15.25rem] flex-col justify-center p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.19em] text-[#ff8d5c] sm:text-sm">Catalogue · {categorie.nom}</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-[2.6rem]">{categorie.nom}</h1>
+            <p className="mt-2 text-sm text-slate-100 sm:text-base">Choisissez une famille pour voir ses produits.</p>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold sm:text-sm">
+              <span className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 backdrop-blur-sm"><FolderOpen size={16} aria-hidden="true" />{familles?.length ?? 0} familles</span>
+              <span className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 backdrop-blur-sm"><PackageSearch size={16} aria-hidden="true" />{nbReferences ?? 0} références</span>
             </div>
           </div>
         </section>
 
-        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Familles</h2><span className="text-sm text-slate-500">{familles?.length ?? 0} familles</span></div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-xl font-bold text-[#17232b] sm:text-2xl">Familles</h2><span className="text-sm text-slate-500">{familles?.length ?? 0} familles</span></div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
 
           {familles?.map((famille) => (
 
@@ -103,21 +103,21 @@ export default async function CategoriePage({ params }: PageProps) {
               href={`/categorie/${slug}/${encodeURIComponent(
                 famille.famille
               )}`}
-              className="group flex min-h-44 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#F95516] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"
+              className="group flex min-h-[11.75rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#F95516] hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F95516]"
             >
-              <div className="flex h-28 items-center justify-center border-b border-slate-100 bg-[#F8F9FA] p-3">
-                {photosFamille[famille.famille] ? (
+              <div className="flex h-28 items-center justify-center overflow-hidden border-b border-slate-100 bg-[#f1f3f5] p-2">
+                {(famille.photo || photosFamille[famille.famille]) ? (
                   // Les photos réelles proviennent du catalogue Supabase.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photosFamille[famille.famille]} alt="" className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105" />
+                  <img src={famille.photo ? supabase.storage.from("photos").getPublicUrl(famille.photo).data.publicUrl : photosFamille[famille.famille]} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                 ) : <ImageOff size={35} className="text-slate-300" />}
               </div>
-              <div className="flex flex-1 items-end justify-between gap-3 p-4">
-                <div><h3 className="font-bold text-[#17232b]">{famille.famille}</h3><p className="mt-1 text-xs text-slate-500">
+              <div className="flex flex-1 items-center justify-between gap-3 px-5 py-4">
+                <div className="min-w-0"><h3 className="font-bold text-[#17232b]">{famille.famille}</h3><p className="mt-1 text-sm text-slate-500">
                   {compteurFamille[famille.famille] ?? 0} référence
                   {(compteurFamille[famille.famille] ?? 0) > 1 ? "s" : ""}
                 </p></div>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F95516] text-white group-hover:translate-x-0.5"><ArrowRight size={18} /></span>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F95516] text-white transition-transform group-hover:translate-x-0.5"><ArrowRight size={20} aria-hidden="true" /></span>
               </div>
             </Link>
 
