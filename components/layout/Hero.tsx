@@ -4,7 +4,7 @@ export default function Hero() {
   return (
     <section className="relative min-h-[17rem] overflow-hidden rounded-2xl border border-slate-800 bg-[#10191e] sm:min-h-[20rem] lg:min-h-[15rem] lg:rounded-none lg:border-x-0">
       <div
-        className="absolute inset-0 bg-cover bg-[right_78%]"
+        className="absolute inset-0 bg-cover bg-[right_56%]"
         style={{ backgroundImage: "url('/hero-atelier-v3.png')" }}
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,16,21,.97)_0%,rgba(10,22,29,.9)_40%,rgba(9,18,23,.32)_70%,rgba(9,18,23,.08)_100%)]" />
