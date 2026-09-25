@@ -37,7 +37,6 @@ export default function Header() {
   ];
 
   const sidebarItems = [
-    { href: "/", label: "Accueil", icon: Home },
     { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
   ];
