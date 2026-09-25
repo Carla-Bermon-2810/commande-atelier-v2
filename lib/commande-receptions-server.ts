@@ -9,6 +9,18 @@ import {
   type ReceptionCommandeSuivi,
 } from "@/lib/commande-suivi";
 
+export type CommandeSuiviResume = {
+  id: string;
+  numero: string;
+  demandeur: string;
+  dateCommande: string;
+  statut: CommandeSuivi["statut"];
+  nombreReferences: number;
+  quantiteCommandee: number;
+  quantiteRecue: number;
+  progression: number;
+};
+
 type CommandeRow = {
   id: string;
   numero: string;
@@ -151,6 +163,72 @@ export async function getCommandeSuivi(commandeId: string): Promise<CommandeSuiv
     lignes: lignesSuivi,
     receptions: receptionsSuivi,
   };
+}
+
+/** Liste compacte pour le panneau gauche du suivi, calculée depuis les réceptions. */
+export async function getCommandesSuivi(): Promise<CommandeSuiviResume[]> {
+  const supabase = getServerSupabase();
+  const { data: commandes, error: commandesError } = await supabase
+    .from("commandes")
+    .select("id, numero, demandeur, date_commande, annulee_le")
+    .order("date_commande", { ascending: false })
+    .limit(200)
+    .returns<Array<Pick<CommandeRow, "id" | "numero" | "demandeur" | "date_commande" | "annulee_le">>>();
+
+  if (commandesError) throw commandesError;
+  if (!commandes?.length) return [];
+
+  const commandeIds = commandes.map((commande) => commande.id);
+  const { data: lignes, error: lignesError } = await supabase
+    .from("commande_articles")
+    .select("id, commande_id, quantite")
+    .in("commande_id", commandeIds)
+    .returns<Array<{ id: string; commande_id: string; quantite: number }>>();
+
+  if (lignesError) throw lignesError;
+
+  const ligneIds = (lignes ?? []).map((ligne) => ligne.id);
+  const { data: receptions, error: receptionsError } = ligneIds.length === 0
+    ? { data: [] as Array<{ commande_article_id: string; quantite_recue: number }>, error: null }
+    : await supabase
+      .from("commande_reception_lignes")
+      .select("commande_article_id, quantite_recue")
+      .in("commande_article_id", ligneIds)
+      .returns<Array<{ commande_article_id: string; quantite_recue: number }>>();
+
+  if (receptionsError) throw receptionsError;
+
+  const recuParLigne = new Map<string, number>();
+  for (const reception of receptions ?? []) {
+    recuParLigne.set(
+      reception.commande_article_id,
+      (recuParLigne.get(reception.commande_article_id) ?? 0) + reception.quantite_recue
+    );
+  }
+
+  const lignesParCommande = new Map<string, Array<{ quantiteCommandee: number; quantiteRecue: number }>>();
+  for (const ligne of lignes ?? []) {
+    const lignesCommande = lignesParCommande.get(ligne.commande_id) ?? [];
+    lignesCommande.push({
+      quantiteCommandee: ligne.quantite,
+      quantiteRecue: recuParLigne.get(ligne.id) ?? 0,
+    });
+    lignesParCommande.set(ligne.commande_id, lignesCommande);
+  }
+
+  return commandes.map((commande) => {
+    const lignesCommande = lignesParCommande.get(commande.id) ?? [];
+    const progression = calculerProgressionReception(lignesCommande);
+    return {
+      id: commande.id,
+      numero: commande.numero,
+      demandeur: commande.demandeur,
+      dateCommande: commande.date_commande,
+      statut: calculerStatutCommande(lignesCommande, Boolean(commande.annulee_le)),
+      nombreReferences: lignesCommande.length,
+      ...progression,
+    };
+  });
 }
 
 export async function enregistrerReception(reception: NouvelleReception) {

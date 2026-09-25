@@ -12,13 +12,17 @@ test("une commande sans réception reste en attente", () => {
   });
 });
 
-test("plusieurs réceptions successives donnent une livraison partielle", () => {
+test("plusieurs réceptions successives donnent une livraison partielle puis complète", () => {
+  const receptions = [4, 3];
   const lignes = [
-    { quantiteCommandee: 10, quantiteRecue: 7 },
+    { quantiteCommandee: 10, quantiteRecue: receptions.reduce((total, quantite) => total + quantite, 0) },
     { quantiteCommandee: 4, quantiteRecue: 0 },
   ];
   assert.equal(calculerStatutCommande(lignes), "Partiellement livrée");
   assert.equal(calculerProgressionReception(lignes).progression, 50);
+
+  receptions.push(3);
+  assert.equal(calculerStatutCommande([{ quantiteCommandee: 10, quantiteRecue: receptions.reduce((total, quantite) => total + quantite, 0) }]), "Livrée");
 });
 
 test("une commande entièrement reçue devient livrée", () => {

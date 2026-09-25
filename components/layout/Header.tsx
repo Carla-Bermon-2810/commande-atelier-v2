@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import {
   ClipboardList,
   FolderOpen,
-  Home,
   Search,
   Settings,
   Package,
@@ -34,11 +33,13 @@ export default function Header() {
   const navItems = [
     { href: "/", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
+    { href: "/commandes", label: "Commandes", icon: ClipboardList },
   ];
 
   const sidebarItems = [
     { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
+    { href: "/commandes", label: "Commandes", icon: ClipboardList },
   ];
 
   const isActive = (href: string) =>
@@ -178,9 +179,9 @@ export default function Header() {
       </header>
       <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
         {[
-          { href: "/", label: "Accueil", icon: Home },
           { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
           { href: "/stock", label: "Stock", icon: Package },
+          { href: "/commandes", label: "Commandes", icon: ClipboardList },
           { href: "/panier", label: "Panier", icon: ShoppingCart },
         ].map(({ href, label, icon: Icon }) => {
           const active = href === "/#catalogue" ? false : isActive(href);
