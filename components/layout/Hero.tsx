@@ -2,13 +2,13 @@ import { Boxes, Layers3, ShoppingCart } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[17rem] overflow-hidden rounded-2xl border border-slate-800 bg-[#10191e] sm:min-h-[20rem] lg:min-h-[18rem] lg:rounded-none lg:border-x-0">
+    <section className="relative min-h-[17rem] overflow-hidden rounded-2xl border border-slate-800 bg-[#10191e] sm:min-h-[20rem] lg:min-h-[15rem] lg:rounded-none lg:border-x-0">
       <div
         className="absolute inset-0 bg-cover bg-[right_78%]"
         style={{ backgroundImage: "url('/hero-atelier-v3.png')" }}
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,16,21,.97)_0%,rgba(10,22,29,.9)_40%,rgba(9,18,23,.32)_70%,rgba(9,18,23,.08)_100%)]" />
-      <div className="relative z-10 flex min-h-[17rem] max-w-3xl flex-col justify-center px-5 py-7 text-white sm:min-h-[20rem] sm:px-10 sm:py-8 lg:min-h-[18rem] lg:px-10 lg:py-6">
+      <div className="relative z-10 flex min-h-[17rem] max-w-3xl flex-col justify-center px-5 py-7 text-white sm:min-h-[20rem] sm:px-10 sm:py-8 lg:min-h-[15rem] lg:px-10 lg:py-6">
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c] sm:text-sm">
           Catalogue interne
         </p>
