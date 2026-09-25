@@ -57,7 +57,7 @@ export default function Header() {
     <>
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#172025] text-white lg:flex">
         <Link href="/" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-3">
-          <Image src="/decoupe-laser-logo-officiel-blanc-cadre.png" alt="Découpe Laser" width={168} height={65} className="h-auto w-full object-contain" priority />
+          <Image src="/decoupe-laser-logo-officiel-orange-intense.png" alt="Découpe Laser" width={168} height={65} className="h-auto w-full object-contain" priority />
         </Link>
 
         <nav className="space-y-1 px-3 py-6" aria-label="Navigation principale">
@@ -121,7 +121,7 @@ export default function Header() {
       <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#172025] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
           <span className="flex h-10 w-[105px] shrink-0 items-center justify-center lg:hidden">
-            <Image src="/decoupe-laser-logo-officiel-blanc-cadre.png" alt="Découpe Laser" width={105} height={41} className="h-auto w-full object-contain" priority />
+            <Image src="/decoupe-laser-logo-officiel-orange-intense.png" alt="Découpe Laser" width={105} height={41} className="h-auto w-full object-contain" priority />
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-white sm:text-2xl lg:text-[#121820]">
