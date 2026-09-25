@@ -1,4 +1,3 @@
-import { supabase } from "./supabase";
 import { CartItem } from "@/context/cart-context";
 
 export async function envoyerCommande(
@@ -6,29 +5,19 @@ export async function envoyerCommande(
   commentaire: string,
   panier: CartItem[]
 ) {
-  const { data: commande, error } = await supabase
-    .from("commandes")
-    .insert({
-      demandeur,
-      commentaire,
-      statut: "Nouvelle",
-    })
-    .select()
-    .single();
+  // Ce composant historique reste compatible, mais n'écrit plus jamais dans
+  // Supabase depuis le navigateur : l'API serveur applique désormais les
+  // snapshots de commande et les droits d'accès prévus pour la production.
+  const response = await fetch("/api/send-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ demandeur, commentaire, articles: panier }),
+  });
 
-  if (error) throw error;
+  const result: { success?: boolean; message?: string; commandeId?: string; numero?: string } = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message ?? "Impossible d’enregistrer la commande.");
+  }
 
-  const lignes = panier.map((item) => ({
-    commande_id: commande.id,
-    article: item.article,
-    quantite: item.quantite,
-  }));
-
-  const { error: lignesError } = await supabase
-    .from("commande_articles")
-    .insert(lignes);
-
-  if (lignesError) throw lignesError;
-
-  return commande;
+  return { id: result.commandeId, numero: result.numero };
 }

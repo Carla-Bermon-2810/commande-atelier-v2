@@ -12,6 +12,10 @@ export interface CartItem {
   article: string;
   famille: string;
   photo?: string;
+  /** Lien optionnel conservé sur les futures lignes de commande. */
+  catalogueId?: number;
+  /** Libellé de variante conservé comme snapshot lorsque disponible. */
+  variante?: string;
   quantite: number;
 }
 
@@ -46,7 +50,9 @@ function isCartItem(value: unknown): value is CartItem {
     typeof item.quantite === "number" &&
     Number.isInteger(item.quantite) &&
     item.quantite > 0 &&
-    (item.photo === undefined || typeof item.photo === "string")
+    (item.photo === undefined || typeof item.photo === "string") &&
+    (item.catalogueId === undefined || (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0)) &&
+    (item.variante === undefined || typeof item.variante === "string")
   );
 }
 

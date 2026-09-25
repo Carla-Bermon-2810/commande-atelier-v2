@@ -7,6 +7,9 @@ export const runtime = "nodejs";
 type OrderArticle = {
   article: string;
   famille: string;
+  catalogueId?: number;
+  variante?: string;
+  photo?: string;
   quantite: number;
 };
 
@@ -43,13 +46,31 @@ function parseOrder(payload: unknown): OrderPayload | null {
     const famille = typeof article.famille === "string"
       ? article.famille.trim().slice(0, 100)
       : "";
+    const catalogueId = Number(article.catalogueId);
+    const variante = typeof article.variante === "string"
+      ? article.variante.trim().slice(0, 160)
+      : undefined;
+    const photo = typeof article.photo === "string"
+      ? article.photo.trim().slice(0, 2_000)
+      : undefined;
     const quantite = Number(article.quantite);
 
-    if (!nom || !Number.isInteger(quantite) || quantite < 1 || quantite > 10_000) {
+    if (
+      !nom ||
+      !Number.isInteger(quantite) || quantite < 1 || quantite > 10_000 ||
+      (article.catalogueId !== undefined && (!Number.isSafeInteger(catalogueId) || catalogueId < 1))
+    ) {
       return null;
     }
 
-    return { article: nom, famille, quantite };
+    return {
+      article: nom,
+      famille,
+      catalogueId: article.catalogueId === undefined ? undefined : catalogueId,
+      variante,
+      photo,
+      quantite,
+    };
   });
 
   return articles.every((article): article is OrderArticle => article !== null)
@@ -115,6 +136,10 @@ export async function POST(req: Request) {
         commande_id: commande.id,
         article: article.article,
         famille: article.famille,
+        catalogue_id: article.catalogueId ?? null,
+        designation_snapshot: article.article,
+        variante_snapshot: article.variante ?? null,
+        photo_snapshot: article.photo ?? null,
         quantite: article.quantite,
       }))
     );
