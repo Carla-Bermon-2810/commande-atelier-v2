@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildTigeReferenceKey,
   buildTubeReferenceKey,
   calculateStockAlertStatus,
   createStockAlertsSnapshot,
@@ -12,6 +13,12 @@ test("les seuils en quantité donnent OK, à recommander et rupture dans cet ord
   assert.equal(calculateStockAlertStatus(10, 10), "a_recommander");
   assert.equal(calculateStockAlertStatus(9, 10), "a_recommander");
   assert.equal(calculateStockAlertStatus(0, 10), "rupture");
+});
+
+test("une longueur sans seuil reste non définie, sauf si elle est à zéro", () => {
+  assert.equal(calculateStockAlertStatus(1200, null), "non_defini");
+  assert.equal(calculateStockAlertStatus(0, null), "rupture");
+  assert.equal(buildTigeReferenceKey({ matiere: "Inox", diametre: "Ø 8" }), buildTigeReferenceKey({ matiere: "inox", diametre: "Ø8" }));
 });
 
 test("les tubes additionnent toutes les chutes d'une même référence en millimètres", () => {
@@ -50,6 +57,28 @@ test("une somme de chutes sous le seuil reste une seule alerte de référence", 
   assert.equal(snapshot.alertes[0].stockActuel, 700);
   assert.equal(snapshot.alertes[0].statut, "a_recommander");
   assert.equal(snapshot.parFamille.get("Tubes:Inox")?.nombreAlertes, 1);
+});
+
+test("modifier le seuil ne modifie jamais la longueur calculée", () => {
+  const tube = { matiere: "acier", type: "carre", section: "30x30", epaisseur: 2, nuance: "S235" };
+  const key = buildTubeReferenceKey(tube);
+  const input = {
+    tubes: [
+      { id: 1, ...tube, longueur_disponible: 1200, statut: "disponible" as const },
+      { id: 2, ...tube, longueur_disponible: 500, statut: "disponible" as const },
+    ],
+    tigesFiletees: [],
+    vis: [], ecrous: [], rivets: [], inserts: [], forets: [], fraises: [], tarauds: [],
+  };
+  const sansSeuil = createStockAlertsSnapshot({ ...input, seuilsLongueur: [] });
+  const avecSeuil = createStockAlertsSnapshot({
+    ...input,
+    seuilsLongueur: [{ source: "tubes" as const, reference_key: key, seuil_mm: 2000 }],
+  });
+
+  assert.equal(sansSeuil.references[0].stockActuel, 1700);
+  assert.equal(avecSeuil.references[0].stockActuel, 1700);
+  assert.equal(avecSeuil.references[0].statut, "a_recommander");
 });
 
 test("l'agrégation compte les références problématiques et conserve une rupture prioritaire", () => {

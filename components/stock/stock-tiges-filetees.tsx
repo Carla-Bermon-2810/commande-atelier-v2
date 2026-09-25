@@ -15,6 +15,12 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { LengthStockStatusBadge, LengthThresholdCell } from "@/components/stock/LengthThresholdCell";
+import {
+  buildTigeReferenceKey,
+  calculateStockAlertStatus,
+  type StockAlertDisplayStatus,
+} from "@/lib/stock-alerts";
 
 type Tige = {
   id: number;
@@ -73,6 +79,7 @@ function TigeGroupRow({
   onToggle,
   onUse,
   onDelete,
+  onSaveThreshold,
 }: {
   groupe: {
     key: string;
@@ -82,11 +89,14 @@ function TigeGroupRow({
     morceauxFiltres: Tige[];
     nombreDisponibles: number;
     longueurDisponible: number;
+    seuil: number | null;
+    statut: StockAlertDisplayStatus;
   };
   ouvert: boolean;
   onToggle: () => void;
   onUse: (tige: Tige) => void;
   onDelete: (tige: Tige) => void;
+  onSaveThreshold: (referenceKey: string, seuil: number | null) => Promise<boolean>;
 }) {
   return (
     <Fragment key={groupe.key}>
@@ -117,6 +127,16 @@ function TigeGroupRow({
             </span>
           </div>
         </td>
+        <td className="px-4 py-4">
+          <LengthThresholdCell
+            key={`${groupe.key}:${groupe.seuil ?? "non-defini"}`}
+            seuil={groupe.seuil}
+            onSave={(seuil) => onSaveThreshold(groupe.key, seuil)}
+          />
+        </td>
+        <td className="px-4 py-4">
+          <LengthStockStatusBadge statut={groupe.statut} />
+        </td>
         <td className="px-4 py-4 text-right">
           <span className="text-xs font-medium text-slate-400">
             {ouvert ? "Masquer" : "Détails"}
@@ -126,7 +146,7 @@ function TigeGroupRow({
 
       {ouvert && (
         <tr className="border-b border-slate-100 bg-slate-50/70">
-          <td colSpan={5} className="px-10 py-3">
+          <td colSpan={7} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
               {groupe.morceauxFiltres.map((tige, index) => {
                 const plein = tige.statut === "disponible" && !estReste(tige);
@@ -230,6 +250,7 @@ export default function StockTigesFiletees() {
   const [diametreFiltre, setDiametreFiltre] = useState("");
 
   const [groupesOuverts, setGroupesOuverts] = useState<Set<string>>(new Set());
+  const [seuils, setSeuils] = useState<Record<string, number>>({});
 
   const [tigeUtilisation, setTigeUtilisation] = useState<Tige | null>(null);
   const [longueurRestanteSaisie, setLongueurRestanteSaisie] = useState("");
@@ -243,20 +264,23 @@ export default function StockTigesFiletees() {
   async function chargerStock() {
     setChargement(true);
     setErreur("");
-
-    const { data, error } = await supabase
-      .from("stock_tiges_filetees")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      console.error("Erreur chargement tiges :", error);
-      setErreur(error.message);
-    } else {
+    try {
+      const [stockResult, seuilsResult] = await Promise.all([
+        supabase.from("stock_tiges_filetees").select("*").order("id", { ascending: false }),
+        fetch("/api/stock/seuils-longueur?source=tiges_filetees"),
+      ]);
+      const { data, error } = stockResult;
+      if (error) throw error;
       setTiges((data ?? []) as Tige[]);
+      if (!seuilsResult.ok) throw new Error("Le stock est chargé, mais les seuils de longueur sont indisponibles.");
+      const payload = await seuilsResult.json() as { seuils?: Array<{ reference_key: string; seuil_mm: number }> };
+      setSeuils(Object.fromEntries((payload.seuils ?? []).map((seuil) => [seuil.reference_key, Number(seuil.seuil_mm)])));
+    } catch (error) {
+      console.error("Erreur chargement tiges :", error);
+      setErreur(error instanceof Error ? error.message : "Impossible de charger les tiges filetées.");
+    } finally {
+      setChargement(false);
     }
-
-    setChargement(false);
   }
 
   useEffect(() => {
@@ -265,7 +289,7 @@ export default function StockTigesFiletees() {
 
   const diametresForm = diametres[form.matiere] ?? [];
 
-  const tigesFiltrees = useMemo(() => {
+  const tigesCorrespondantes = useMemo(() => {
     const rechercheNormalisee = recherche.trim().toLowerCase();
 
     return tiges.filter((tige) => {
@@ -281,19 +305,20 @@ export default function StockTigesFiletees() {
         !matiereFiltre || normaliserMatiere(tige.matiere) === normaliserMatiere(matiereFiltre);
       const correspondDiametre =
         !diametreFiltre || normaliserDiametre(tige.diametre) === diametreFiltre;
-      const correspondStatut = tige.statut === "disponible";
-
-      return correspondRecherche && correspondMatiere && correspondDiametre && correspondStatut;
+      return correspondRecherche && correspondMatiere && correspondDiametre;
     });
   }, [tiges, recherche, matiereFiltre, diametreFiltre]);
+
+  const tigesFiltrees = useMemo(
+    () => tigesCorrespondantes.filter((tige) => tige.statut === "disponible"),
+    [tigesCorrespondantes],
+  );
 
   const groupes = useMemo(() => {
     const map = new Map<string, Tige[]>();
 
-    for (const tige of tigesFiltrees) {
-      const matiere = normaliserMatiere(tige.matiere);
-      const diametre = normaliserDiametre(tige.diametre);
-      const key = `${matiere}|${diametre}`;
+    for (const tige of tigesCorrespondantes) {
+      const key = buildTigeReferenceKey(tige);
       const liste = map.get(key) ?? [];
       liste.push(tige);
       map.set(key, liste);
@@ -305,8 +330,7 @@ export default function StockTigesFiletees() {
 
     const tousLesMorceaux = tiges.filter(
       (tige) =>
-        normaliserMatiere(tige.matiere) === matiere &&
-        normaliserDiametre(tige.diametre) === diametre
+        buildTigeReferenceKey(tige) === key
     );
 
     const disponibles = tousLesMorceaux.filter(
@@ -322,11 +346,16 @@ export default function StockTigesFiletees() {
     return {
       key,
       matiere,
-      diametre,
+      diametre: normaliserDiametre(liste[0]?.diametre ?? diametre),
       morceaux: tousLesMorceaux,
       morceauxFiltres: liste,
       nombreDisponibles: disponibles.length,
       longueurDisponible,
+      seuil: Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null,
+      statut: calculateStockAlertStatus(
+        longueurDisponible,
+        Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null,
+      ),
     };
   })
   .sort((a, b) => {
@@ -353,7 +382,32 @@ export default function StockTigesFiletees() {
 
     return diametreA - diametreB;
   });
-  }, [tiges, tigesFiltrees]);
+  }, [tiges, tigesCorrespondantes, seuils]);
+
+  async function enregistrerSeuil(referenceKey: string, seuil: number | null) {
+    setErreur("");
+    try {
+      const response = await fetch("/api/stock/seuils-longueur", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "tiges_filetees", referenceKey, seuilMm: seuil }),
+      });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? "Impossible d’enregistrer le seuil.");
+      setSeuils((previous) => {
+        const next = { ...previous };
+        if (seuil === null) delete next[referenceKey];
+        else next[referenceKey] = seuil;
+        return next;
+      });
+      setMessage(seuil === null ? "Seuil de longueur supprimé." : "Seuil de longueur enregistré.");
+      setTimeout(() => setMessage(""), 2500);
+      return true;
+    } catch (error) {
+      setErreur(error instanceof Error ? error.message : "Impossible d’enregistrer le seuil.");
+      return false;
+    }
+  }
 
   const nombreDisponibles = tiges.filter(
     (tige) => tige.statut === "disponible"
@@ -740,6 +794,8 @@ export default function StockTigesFiletees() {
                   <th className="px-4 py-4 text-left">Matière</th>
                   <th className="px-4 py-4 text-left">Diamètre</th>
                   <th className="px-4 py-4 text-left">Stock</th>
+                  <th className="px-4 py-4 text-left">Seuil</th>
+                  <th className="px-4 py-4 text-left">Statut</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -752,6 +808,7 @@ export default function StockTigesFiletees() {
                     onToggle={() => basculerGroupe(groupe.key)}
                     onUse={ouvrirUtilisation}
                     onDelete={supprimerTige}
+                    onSaveThreshold={enregistrerSeuil}
                   />
                 ))}
               </tbody>

@@ -14,6 +14,12 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { LengthStockStatusBadge, LengthThresholdCell } from "@/components/stock/LengthThresholdCell";
+import {
+  buildTubeReferenceKey,
+  calculateStockAlertStatus,
+  type StockAlertDisplayStatus,
+} from "@/lib/stock-alerts";
 
 type StockTube = {
   id: number;
@@ -110,8 +116,9 @@ function FragmentRow({
   onToggle,
   onUse,
   onDelete,
+  onSaveThreshold,
 }: {
-  groupe: { key: string; items: StockTube[]; longueurTotale: number };
+  groupe: { key: string; items: StockTube[]; longueurTotale: number; seuil: number | null; statut: StockAlertDisplayStatus };
   exemple: StockTube;
   ouvert: boolean;
   plein: StockTube[];
@@ -119,6 +126,7 @@ function FragmentRow({
   onToggle: () => void;
   onUse: (tube: StockTube) => void;
   onDelete: (tube: StockTube) => void;
+  onSaveThreshold: (referenceKey: string, seuil: number | null) => Promise<boolean>;
 }) {
   return (
     <>
@@ -138,6 +146,16 @@ function FragmentRow({
             <span className="font-bold text-[#2F3437]">{groupe.longueurTotale} mm</span>
           </div>
         </td>
+        <td className="px-4 py-4">
+          <LengthThresholdCell
+            key={`${groupe.key}:${groupe.seuil ?? "non-defini"}`}
+            seuil={groupe.seuil}
+            onSave={(seuil) => onSaveThreshold(groupe.key, seuil)}
+          />
+        </td>
+        <td className="px-4 py-4">
+          <LengthStockStatusBadge statut={groupe.statut} />
+        </td>
         <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
         <td className="px-4 py-4">
           <span className="text-xs font-medium text-slate-400">{ouvert ? "Masquer" : "Détails"}</span>
@@ -146,7 +164,7 @@ function FragmentRow({
 
       {ouvert && (
         <tr className="border-b bg-slate-50/70">
-          <td colSpan={8} className="px-10 py-3">
+          <td colSpan={10} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
               {groupe.items.map((tube, index) => {
                 const estPlein = tube.statut === "disponible" && tube.parent_id == null;
@@ -211,6 +229,7 @@ export default function Stock({ matiere }: StockProps) {
   const [filtreSection, setFiltreSection] = useState("");
   const [filtreNuance, setFiltreNuance] = useState("");
   const [groupesOuverts, setGroupesOuverts] = useState<Record<string, boolean>>({});
+  const [seuils, setSeuils] = useState<Record<string, number>>({});
 
 
   const [tubeUtilisation, setTubeUtilisation] = useState<StockTube | null>(null);
@@ -235,13 +254,26 @@ export default function Stock({ matiere }: StockProps) {
 
   async function chargerStock() {
     setChargement(true);
-    const { data, error } = await supabase
-      .from("stock_tubes")
-      .select("*")
-      .order("id", { ascending: false });
-    if (error) setErreur(error.message);
-    else setTubes(data ?? []);
-    setChargement(false);
+    setErreur("");
+    try {
+      const [stockResult, seuilsResult] = await Promise.all([
+        supabase.from("stock_tubes").select("*").order("id", { ascending: false }),
+        fetch("/api/stock/seuils-longueur?source=tubes"),
+      ]);
+      const { data, error } = stockResult;
+      if (error) throw error;
+      setTubes(data ?? []);
+      if (!seuilsResult.ok) {
+        throw new Error("Le stock est chargé, mais les seuils de longueur sont indisponibles.");
+      } else {
+        const payload = await seuilsResult.json() as { seuils?: Array<{ reference_key: string; seuil_mm: number }> };
+        setSeuils(Object.fromEntries((payload.seuils ?? []).map((seuil) => [seuil.reference_key, Number(seuil.seuil_mm)])));
+      }
+    } catch (error) {
+      setErreur(error instanceof Error ? error.message : "Impossible de charger les tubes.");
+    } finally {
+      setChargement(false);
+    }
   }
 
   useEffect(() => {
@@ -488,50 +520,75 @@ export default function Stock({ matiere }: StockProps) {
     }
   }
 
-  const tubesFiltres = tubes.filter((tube) => {
-    const terme = recherche.trim().toLowerCase();
-    const okRecherche = !terme || [tube.numero, tube.matiere, tube.type, tube.section, tube.nuance ?? ""].some((v) => v.toLowerCase().includes(terme));
-    const okMatierePage = !matiere || tube.matiere === matiere;
-    return (
-      tube.statut === "disponible" &&
-      okRecherche &&
-      okMatierePage &&
-      (!filtreMatiere || tube.matiere === filtreMatiere) &&
-      (!filtreType || tube.type === filtreType) &&
-      (!filtreSection || tube.section.toLowerCase().includes(filtreSection.toLowerCase())) &&
-      (!filtreNuance || (tube.nuance ?? "").toLowerCase().includes(filtreNuance.toLowerCase()))
-    );
-  });
+  const tubesCorrespondants = useMemo(() => tubes.filter((tube) => {
+      const terme = recherche.trim().toLowerCase();
+      const okRecherche = !terme || [tube.numero, tube.matiere, tube.type, tube.section, tube.nuance ?? ""].some((v) => v.toLowerCase().includes(terme));
+      const okMatierePage = !matiere || tube.matiere === matiere;
+      return (
+        okRecherche &&
+        okMatierePage &&
+        (!filtreMatiere || tube.matiere === filtreMatiere) &&
+        (!filtreType || tube.type === filtreType) &&
+        (!filtreSection || tube.section.toLowerCase().includes(filtreSection.toLowerCase())) &&
+        (!filtreNuance || (tube.nuance ?? "").toLowerCase().includes(filtreNuance.toLowerCase()))
+      );
+    }), [tubes, recherche, matiere, filtreMatiere, filtreType, filtreSection, filtreNuance]);
+
+  const tubesFiltres = useMemo(
+    () => tubesCorrespondants.filter((tube) => tube.statut === "disponible"),
+    [tubesCorrespondants],
+  );
 
   const tubesPage = matiere ? tubes.filter((tube) => tube.matiere === matiere) : tubes;
   const filtresActifs = !!(recherche || filtreMatiere || filtreType || filtreSection || filtreNuance);
 
-  function cleGroupe(tube: StockTube) {
-    return [
-      tube.matiere,
-      tube.type,
-      tube.section,
-      tube.epaisseur ?? "",
-      tube.nuance ?? "",
-    ].join("|");
-  }
-
   const groupes = useMemo(() => {
     const map = new Map<string, StockTube[]>();
 
-    for (const tube of tubesFiltres) {
-      const key = cleGroupe(tube);
+    for (const tube of tubesCorrespondants) {
+      const key = buildTubeReferenceKey(tube);
       const groupe = map.get(key) ?? [];
       groupe.push(tube);
       map.set(key, groupe);
     }
 
-    return Array.from(map.entries()).map(([key, items]) => ({
-      key,
-      items: [...items].sort((a, b) => b.longueur_disponible - a.longueur_disponible),
-      longueurTotale: items.reduce((total, tube) => total + (tube.statut === "disponible" ? tube.longueur_disponible : 0), 0),
-    }));
-  }, [tubesFiltres]);
+    return Array.from(map.entries()).map(([key, items]) => {
+      const longueurTotale = items.reduce((total, tube) => total + (tube.statut === "disponible" ? Number(tube.longueur_disponible || 0) : 0), 0);
+      const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
+      return {
+        key,
+        items: [...items].sort((a, b) => b.longueur_disponible - a.longueur_disponible),
+        longueurTotale,
+        seuil,
+        statut: calculateStockAlertStatus(longueurTotale, seuil),
+      };
+    });
+  }, [tubesCorrespondants, seuils]);
+
+  async function enregistrerSeuil(referenceKey: string, seuil: number | null) {
+    setErreur("");
+    try {
+      const response = await fetch("/api/stock/seuils-longueur", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "tubes", referenceKey, seuilMm: seuil }),
+      });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? "Impossible d’enregistrer le seuil.");
+      setSeuils((previous) => {
+        const next = { ...previous };
+        if (seuil === null) delete next[referenceKey];
+        else next[referenceKey] = seuil;
+        return next;
+      });
+      setMessage(seuil === null ? "Seuil de longueur supprimé." : "Seuil de longueur enregistré.");
+      setTimeout(() => setMessage(""), 2500);
+      return true;
+    } catch (error) {
+      setErreur(error instanceof Error ? error.message : "Impossible d’enregistrer le seuil.");
+      return false;
+    }
+  }
 
   function basculerGroupe(key: string) {
     setGroupesOuverts((anciens) => ({
@@ -616,6 +673,8 @@ export default function Stock({ matiere }: StockProps) {
                   <th className="px-4 py-4">Section</th>
                   <th className="px-4 py-4">Épaisseur</th>
                   <th className="px-4 py-4">Stock</th>
+                  <th className="px-4 py-4">Seuil</th>
+                  <th className="px-4 py-4">Statut</th>
                   <th className="px-4 py-4">Nuance</th>
                   <th className="px-4 py-4">Actions</th>
                 </tr>
@@ -639,6 +698,7 @@ export default function Stock({ matiere }: StockProps) {
                       onToggle={() => basculerGroupe(groupe.key)}
                       onUse={ouvrirUtilisation}
                       onDelete={supprimerDuStock}
+                      onSaveThreshold={enregistrerSeuil}
                     />
                   );
                 })}

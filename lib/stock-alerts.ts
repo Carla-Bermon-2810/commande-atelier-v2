@@ -1,4 +1,5 @@
 export type StockAlertStatus = "ok" | "a_recommander" | "rupture";
+export type StockAlertDisplayStatus = StockAlertStatus | "non_defini";
 export type StockAlertUnit = "mm" | "pieces";
 export type StockAlertSource =
   | "tubes"
@@ -19,9 +20,9 @@ export type StockAlertReference = {
   referenceKey: string;
   libelle: string;
   stockActuel: number;
-  seuil: number;
+  seuil: number | null;
   unite: StockAlertUnit;
-  statut: StockAlertStatus;
+  statut: StockAlertDisplayStatus;
 };
 
 export type StockAlertGroup = {
@@ -88,7 +89,8 @@ export type StockAlertSnapshotInput = {
   tarauds: StockQuantiteRow[];
 };
 
-const severity: Record<StockAlertStatus, number> = {
+const severity: Record<StockAlertDisplayStatus, number> = {
+  non_defini: 0,
   ok: 0,
   a_recommander: 1,
   rupture: 2,
@@ -120,22 +122,32 @@ export function buildTubeReferenceKey(row: Pick<TubeStockRow, "matiere" | "type"
 }
 
 export function buildTigeReferenceKey(row: Pick<TigeStockRow, "matiere" | "diametre">) {
-  return [row.matiere, row.diametre].map(normalise).join("|");
+  const diametre = text(row.diametre).replace(/\s+/g, "");
+  return [normalise(row.matiere), normalise(diametre.startsWith("Ø") ? diametre : `Ø${diametre}`)].join("|");
 }
 
 /** Le seuil est inclus dans l'alerte seulement après la priorité absolue de rupture. */
-export function calculateStockAlertStatus(stockActuel: number, seuil: number): StockAlertStatus {
+export function calculateStockAlertStatus(stockActuel: number, seuil?: number | null): StockAlertDisplayStatus {
   const stock = numberOrZero(stockActuel);
-  const threshold = numberOrZero(seuil);
 
   if (stock === 0) return "rupture";
+  if (seuil === null || seuil === undefined) return "non_defini";
+
+  const threshold = numberOrZero(seuil);
   if (stock <= threshold) return "a_recommander";
   return "ok";
 }
 
+export function stockAlertStatusLabel(statut: StockAlertDisplayStatus) {
+  if (statut === "rupture") return "Rupture";
+  if (statut === "a_recommander") return "À recommander";
+  if (statut === "non_defini") return "Non défini";
+  return "OK";
+}
+
 export function getStockAlertGroup(references: StockAlertReference[]): StockAlertGroup {
-  const nombreAlertes = references.filter((reference) => reference.statut !== "ok").length;
-  const severiteMaximale = references.reduce<StockAlertStatus>(
+  const nombreAlertes = references.filter((reference) => reference.statut === "a_recommander" || reference.statut === "rupture").length;
+  const statutMaximum = references.reduce<StockAlertDisplayStatus>(
     (highest, reference) =>
       severity[reference.statut] > severity[highest] ? reference.statut : highest,
     "ok",
@@ -144,7 +156,7 @@ export function getStockAlertGroup(references: StockAlertReference[]): StockAler
   return {
     nombreReferences: references.length,
     nombreAlertes,
-    severiteMaximale,
+    severiteMaximale: statutMaximum === "non_defini" ? "ok" : statutMaximum,
   };
 }
 
@@ -186,7 +198,7 @@ function buildLengthAlerts<T extends TubeStockRow | TigeStockRow>(args: {
       (total, row) => total + (row.statut === "disponible" ? numberOrZero(row.longueur_disponible) : 0),
       0,
     );
-    const seuil = args.thresholds.get(`${args.source}:${referenceKey}`) ?? 0;
+    const seuil = args.thresholds.get(`${args.source}:${referenceKey}`) ?? null;
 
     return {
       id: `${args.source}:${referenceKey}`,
@@ -293,7 +305,7 @@ export function createStockAlertsSnapshot(input: StockAlertSnapshotInput) {
   ];
 
   const alertes = references
-    .filter((reference) => reference.statut !== "ok")
+    .filter((reference) => reference.statut === "a_recommander" || reference.statut === "rupture")
     .sort((left, right) => severity[right.statut] - severity[left.statut] || left.libelle.localeCompare(right.libelle, "fr"));
 
   return {
