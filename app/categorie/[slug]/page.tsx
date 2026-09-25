@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, FolderOpen, ArrowLeft, PackageSearch, ImageOff } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { categoryImage } from "@/lib/category-visuals";
+import { categoryImage, familyImage } from "@/lib/category-visuals";
 import { supabase } from "@/lib/supabase";
 
 interface PageProps {
@@ -106,10 +106,10 @@ export default async function CategoriePage({ params }: PageProps) {
               className="group flex min-h-[11.75rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#F95516] hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F95516]"
             >
               <div className="flex h-28 items-center justify-center overflow-hidden border-b border-slate-100 bg-[#f1f3f5] p-2">
-                {(famille.photo || photosFamille[famille.famille]) ? (
+                {(familyImage(categorie.nom, famille.famille) || famille.photo || photosFamille[famille.famille]) ? (
                   // Les photos réelles proviennent du catalogue Supabase.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={famille.photo ? supabase.storage.from("photos").getPublicUrl(famille.photo).data.publicUrl : photosFamille[famille.famille]} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                  <img src={familyImage(categorie.nom, famille.famille) ?? (famille.photo ? supabase.storage.from("photos").getPublicUrl(famille.photo).data.publicUrl : photosFamille[famille.famille])} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                 ) : <ImageOff size={35} className="text-slate-300" />}
               </div>
               <div className="flex flex-1 items-center justify-between gap-3 px-5 py-4">
