@@ -109,7 +109,7 @@ export default async function CategoriePage({ params }: PageProps) {
                 {(familyImage(categorie.nom, famille.famille) || famille.photo || photosFamille[famille.famille]) ? (
                   // Les photos réelles proviennent du catalogue Supabase.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={familyImage(categorie.nom, famille.famille) ?? (famille.photo ? supabase.storage.from("photos").getPublicUrl(famille.photo).data.publicUrl : photosFamille[famille.famille])} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <img src={familyImage(categorie.nom, famille.famille) ?? (famille.photo ? supabase.storage.from("photos").getPublicUrl(famille.photo).data.publicUrl : photosFamille[famille.famille])} alt="" className="h-full w-full scale-150 object-cover transition-transform duration-300 group-hover:scale-[1.6]" />
                 ) : <ImageOff size={35} className="text-slate-300" />}
               </div>
               <div className="flex flex-1 items-center justify-between gap-3 px-5 py-4">
