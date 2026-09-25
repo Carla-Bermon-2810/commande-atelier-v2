@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -16,19 +17,6 @@ import {
 
 import CartButton from "@/components/panier/CartButton";
 import { useCart } from "@/context/cart-context";
-
-function DecoupeLaserLogo({ className = "" }: { className?: string }) {
-  return (
-    <span className={`flex flex-col items-center leading-none ${className}`} aria-label="Découpe Laser">
-      <span className="relative whitespace-nowrap text-[1.9rem] font-black tracking-[-0.09em] text-white">
-        Découpe
-        <span aria-hidden="true" className="absolute bottom-[0.02em] left-[3.3rem] h-[0.12em] w-[0.9rem] -rotate-[42deg] rounded-full bg-[#ff5a1f]" />
-      </span>
-      <span className="mt-1 whitespace-nowrap pl-1 text-[0.48rem] font-black tracking-[0.52em] text-[#ff6a2b]">LASER</span>
-      <span className="mt-1 whitespace-nowrap text-[0.27rem] font-semibold tracking-[0.16em] text-slate-300">CONCEPTION &amp; RÉALISATION SUR MESURE</span>
-    </span>
-  );
-}
 
 export default function Header() {
   const pathname = usePathname();
@@ -69,7 +57,7 @@ export default function Header() {
     <>
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#172025] text-white lg:flex">
         <Link href="/" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-3">
-          <DecoupeLaserLogo className="w-full" />
+          <Image src="/decoupe-laser-logo-officiel-blanc-cadre.png" alt="Découpe Laser" width={168} height={65} className="h-auto w-full object-contain" priority />
         </Link>
 
         <nav className="space-y-1 px-3 py-6" aria-label="Navigation principale">
@@ -133,7 +121,7 @@ export default function Header() {
       <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#172025] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
           <span className="flex h-10 w-[105px] shrink-0 items-center justify-center lg:hidden">
-            <DecoupeLaserLogo className="scale-[0.7]" />
+            <Image src="/decoupe-laser-logo-officiel-blanc-cadre.png" alt="Découpe Laser" width={105} height={41} className="h-auto w-full object-contain" priority />
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-white sm:text-2xl lg:text-[#121820]">
