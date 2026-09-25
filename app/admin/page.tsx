@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
+import ContextBanner from "@/components/layout/ContextBanner";
 
 import Articles from "@/components/admin/Articles";
 import Categories from "@/components/admin/Categories";
 import Familles from "@/components/admin/Familles";
 
 import {
-  Boxes,
   Package,
   FolderTree,
   LayoutGrid,
@@ -39,16 +39,13 @@ export default function AdminPage() {
     <AppLayout>
       <div className="mx-auto max-w-7xl p-5">
 
-        <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Espace de gestion</p>
-          <div className="mt-3 flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#F95516]"><Boxes size={27} /></div>
-            <div>
-              <h1 className="text-3xl font-bold text-[#2F3437]">Administration</h1>
-              <p className="mt-1 text-slate-500">Gérez les références, catégories et familles du catalogue.</p>
-            </div>
-          </div>
-        </section>
+        <ContextBanner
+          eyebrow="Espace de gestion"
+          title="Administration"
+          description="Gérez les références, catégories et familles du catalogue."
+          image="/category-quincaillerie-v1.png"
+          meta="Accès administrateur"
+        />
 
         <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           {cartes.map((carte) => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, FolderOpen, ArrowLeft, PackageSearch } from "lucide-react";
+import { ArrowRight, FolderOpen, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import ContextBanner from "@/components/layout/ContextBanner";
 import { supabase } from "@/lib/supabase";
 
 interface PageProps {
@@ -60,6 +61,15 @@ export default async function CategoriePage({ params }: PageProps) {
       (compteurFamille[article.famille] || 0) + 1;
   });
 
+  const categoryImages: Record<string, string> = {
+    abrasif: "/category-abrasif-v1.png",
+    "outils-de-coupe": "/category-outils-coupe-v1.png",
+    "poste-soudure": "/category-soudure-v1.png",
+    consommable: "/category-consommable-v1.png",
+    quincaillerie: "/category-quincaillerie-v1.png",
+    epi: "/category-epi-v1.png",
+  };
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl">
@@ -73,25 +83,13 @@ export default async function CategoriePage({ params }: PageProps) {
         </Link>
       </div>
 
-        <section className="mb-7 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Catalogue · {categorie.nom}</p>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-[#F95516]"><Boxes size={27} /></div>
-                <div>
-                  <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">{categorie.nom}</h1>
-                  <p className="mt-1 text-slate-500">Choisissez une famille, puis sélectionnez la référence adaptée.</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm font-semibold text-slate-600">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2"><FolderOpen size={17} className="text-[#F95516]" />{familles?.length ?? 0} familles</span>
-              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"><PackageSearch size={17} className="text-[#F95516]" />{nbReferences ?? 0} références</span>
-            </div>
-          </div>
-          <p className="border-t border-slate-100 bg-slate-50 px-6 py-3 text-sm text-slate-600 sm:px-8">Les variantes de format, diamètre ou grain se choisissent dans la fiche produit.</p>
-        </section>
+        <ContextBanner
+          eyebrow={`Catalogue › ${categorie.nom}`}
+          title={categorie.nom}
+          description="Choisissez une famille, puis sélectionnez la référence adaptée."
+          image={categoryImages[slug] ?? "/hero-atelier-v3.png"}
+          meta={<><span>{familles?.length ?? 0} familles</span><span className="mx-2 text-white/40">•</span><span>{nbReferences ?? 0} références</span></>}
+        />
 
         {/* Cartes */}
 

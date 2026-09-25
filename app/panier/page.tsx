@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Loader2, PackagePlus, Send, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import ContextBanner from "@/components/layout/ContextBanner";
 import { useCart } from "@/context/cart-context";
 import CartItem from "@/components/cart/CartItem";
 
@@ -80,14 +82,30 @@ export default function PanierPage() {
     }
   }
 
+  if (feedback?.type === "success" && cart.length === 0) {
+    return (
+      <AppLayout>
+        <section className="mx-auto mt-6 max-w-4xl rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm sm:px-12">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200"><CheckCircle2 size={36} /></div>
+          <h1 className="mt-5 text-3xl font-black text-[#17212a]">Demande envoyée !</h1>
+          <p className="mt-2 text-slate-500">Votre demande a bien été transmise à l’équipe atelier.</p>
+          <div className="mx-auto mt-7 max-w-lg rounded-xl bg-slate-50 p-5 text-left text-sm text-slate-600"><p className="font-semibold text-[#17212a]">{feedback.message}</p><p className="mt-2">Un bon de commande a été généré et transmis avec le détail des articles.</p></div>
+          <Link href="/" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f15a24] px-6 font-bold text-white hover:bg-[#d84b1a]">Retour au catalogue</Link>
+        </section>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#F95516]">Commande</p>
-          <h1 className="mt-1 text-2xl font-bold text-[#2F3437] sm:text-4xl">Mon panier</h1>
-          <p className="mt-2 text-slate-500">Vérifiez les quantités, puis envoyez votre demande à l’atelier.</p>
-        </div>
+        <ContextBanner
+          eyebrow="Commande atelier"
+          title="Votre panier"
+          description="Vérifiez les quantités, puis envoyez votre demande à l’atelier."
+          image="/category-soudure-v1.png"
+          meta={`${cart.length} article${cart.length > 1 ? "s" : ""}`}
+        />
 
         {feedback && (
           <div

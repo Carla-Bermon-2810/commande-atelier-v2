@@ -1,6 +1,7 @@
 import { getServerSupabase } from "@/lib/supabase-server";
 import { requireAdminAccess } from "@/lib/admin-auth";
 import AppLayout from "@/components/layout/AppLayout";
+import ContextBanner from "@/components/layout/ContextBanner";
 import Link from "next/link";
 import { supprimerCommande } from "./actions";
 import { Trash2, Eye } from "lucide-react";
@@ -25,17 +26,20 @@ export default async function CommandesPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl p-8">
+      <div className="mx-auto max-w-7xl p-5 lg:p-8">
+        <ContextBanner
+          eyebrow="Administration › Commandes"
+          title="Mes demandes"
+          description="Retrouvez l’historique et le suivi des demandes atelier."
+          image="/category-soudure-v1.png"
+          meta={`${commandes?.length ?? 0} demande${(commandes?.length ?? 0) > 1 ? "s" : ""}`}
+        />
 
-        <h1 className="mb-8 text-4xl font-bold">
-          📦 Commandes
-        </h1>
-
-        <div className="overflow-hidden rounded-2xl border bg-white shadow">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
           <table className="w-full">
 
-            <thead className="bg-slate-100">
+            <thead className="bg-slate-50 text-sm text-slate-500">
 
               <tr>
 
@@ -65,7 +69,7 @@ export default async function CommandesPage() {
 
                 <tr
                   key={commande.id}
-                  className="border-t hover:bg-slate-50"
+                  className="border-t border-slate-100 hover:bg-slate-50"
                 >
 
                   <td className="p-4">
@@ -87,7 +91,7 @@ export default async function CommandesPage() {
                       <Link
                         href={`/admin/commandes/${commande.id}`}
                         title="Voir"
-                        className="rounded-lg bg-[#F95516] p-3 text-white transition hover:bg-[#dd4b13]"
+                        className="rounded-lg bg-[#f15a24] p-3 text-white transition hover:bg-[#d84b1a]"
                       >
                         <Eye size={20} />
                       </Link>

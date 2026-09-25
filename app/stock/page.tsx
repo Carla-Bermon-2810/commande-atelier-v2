@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Boxes, Package, ScanSearch } from "lucide-react";
+import { ArrowUpRight, Boxes, Package, ScanSearch, SlidersHorizontal } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -39,26 +39,33 @@ export default function StockPage() {
   return (
     <AppLayout>
       <main className="w-full px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <section className="mb-8 overflow-hidden rounded-3xl border border-slate-800 bg-[linear-gradient(120deg,#11252d,#1e4c5e)] text-white shadow-[0_16px_36px_rgba(15,23,42,.14)]">
-          <div className="flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e6a17b]">Espace de travail</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f15a24]">Gestion stock</p>
               <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[#f1b08b]"><Boxes size={27} /></div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f15a24]/10 text-[#f15a24]"><Boxes size={27} /></div>
                 <div>
-                  <h1 className="text-3xl font-bold text-white sm:text-4xl">Stock atelier</h1>
-                  <p className="mt-1 text-slate-200">Ouvrez une famille pour consulter, ajuster ou compléter son stock.</p>
+                  <h1 className="text-3xl font-bold text-[#17212a] sm:text-4xl">Stock atelier</h1>
+                  <p className="mt-1 text-slate-500">Consultez les quantités disponibles en temps réel.</p>
                 </div>
               </div>
             </div>
-
-            <div className="flex flex-wrap gap-3 text-sm font-medium text-slate-100">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2"><Package size={17} className="text-[#e6a17b]" />4 familles de suivi</span>
-              <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-3 py-2"><ScanSearch size={17} className="text-[#e6a17b]" />Recherche dans chaque famille</span>
-            </div>
+            <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-[#f15a24] hover:text-[#f15a24]"><SlidersHorizontal size={17} />Filtres</button>
           </div>
-          <div className="border-t border-white/10 bg-black/10 px-6 py-3 text-sm text-slate-200 sm:px-8">Conseil opérateur : choisissez d’abord la famille, puis filtrez par matière, dimension ou référence.</div>
         </section>
+
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["4", "Familles de stock", Boxes],
+            ["Tubes", "Matière et section", Package],
+            ["Fixations", "Vis, écrous et rivets", ScanSearch],
+            ["Outillage", "Forets, fraises et tarauds", ScanSearch],
+          ].map(([value, label, Icon]) => {
+            const MetricIcon = Icon as typeof Boxes;
+            return <div key={label as string} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><MetricIcon size={20} className="text-[#f15a24]" /><p className="mt-3 text-xl font-black text-[#17212a]">{value as string}</p><p className="mt-1 text-xs text-slate-500">{label as string}</p></div>;
+          })}
+        </div>
 
         {/* Cartes */}
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-4">
