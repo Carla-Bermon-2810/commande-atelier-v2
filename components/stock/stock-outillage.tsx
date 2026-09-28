@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
 
 type TypeOutillage = "forets" | "fraises" | "tarauds";
 
@@ -99,6 +100,7 @@ export default function StockOutillage({
     }
 
     setOutils((data as Outil[]) || []);
+    notifyStockAlertsUpdated();
     setChargement(false);
   }
 

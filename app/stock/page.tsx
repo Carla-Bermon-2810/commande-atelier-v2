@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Package } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
+import StockAlertBadge from "@/components/stock/StockAlertBadge";
+import { useStockAlerts } from "@/lib/stock-alerts-client";
 
 const categories = [
   {
@@ -36,12 +40,13 @@ const categories = [
 ];
 
 export default function StockPage() {
+  const { data } = useStockAlerts();
   return (
     <AppLayout>
       <div className="w-full px-1 py-5 sm:px-3 sm:py-7 lg:px-5 lg:py-8">
         <section className="mb-5 rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-5">
           <p className="text-xs font-bold uppercase tracking-[0.19em] text-[#F95516]">Espace de travail</p>
-          <div className="mt-3 flex items-center gap-4">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fff1e9] text-[#F95516]">
               <Package size={25} strokeWidth={2.2} aria-hidden="true" />
             </span>
@@ -49,6 +54,7 @@ export default function StockPage() {
               <h1 className="text-2xl font-bold tracking-tight text-[#17232b] sm:text-3xl">Stock atelier</h1>
               <p className="mt-1 text-sm text-slate-500 sm:text-base">Consultez les quantités disponibles par famille.</p>
             </div>
+            <Link href="/stock/alertes" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-bold text-[#c43f10] hover:bg-orange-100"><StockAlertBadge group={data?.global} />Centre d’alertes</Link>
           </div>
         </section>
 
@@ -68,8 +74,8 @@ export default function StockPage() {
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,18,23,.18)_0%,rgba(10,18,23,.08)_30%,rgba(10,18,23,.74)_65%,rgba(10,18,23,.98)_100%)]" />
 
-              <span className="relative z-10 w-fit max-w-full rounded-full bg-[#293741]/90 px-4 py-2 text-xs font-semibold text-white shadow-sm backdrop-blur-sm">
-                {category.badge}
+              <span className="relative z-10 flex w-fit max-w-full items-center gap-2 rounded-full bg-[#293741]/90 px-4 py-2 text-xs font-semibold text-white shadow-sm backdrop-blur-sm">
+                <StockAlertBadge group={data?.parCategorie[category.title]} />{category.badge}
               </span>
 
               <div className="relative z-10">

@@ -20,6 +20,7 @@ import {
   calculateStockAlertStatus,
   type StockAlertDisplayStatus,
 } from "@/lib/stock-alerts";
+import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
 
 type StockTube = {
   id: number;
@@ -263,6 +264,7 @@ export default function Stock({ matiere }: StockProps) {
       const { data, error } = stockResult;
       if (error) throw error;
       setTubes(data ?? []);
+      notifyStockAlertsUpdated();
       if (!seuilsResult.ok) {
         throw new Error("Le stock est chargé, mais les seuils de longueur sont indisponibles.");
       } else {
@@ -510,6 +512,7 @@ export default function Stock({ matiere }: StockProps) {
       }
 
       setTubes((precedentes) => precedentes.filter((t) => t.id !== tube.id));
+      notifyStockAlertsUpdated();
       setMessage(`Tube ${tube.numero} retiré du stock.`);
       setTimeout(() => setMessage(""), 2500);
     } catch (error: any) {
@@ -581,6 +584,7 @@ export default function Stock({ matiere }: StockProps) {
         else next[referenceKey] = seuil;
         return next;
       });
+      notifyStockAlertsUpdated();
       setMessage(seuil === null ? "Seuil de longueur supprimé." : "Seuil de longueur enregistré.");
       setTimeout(() => setMessage(""), 2500);
       return true;

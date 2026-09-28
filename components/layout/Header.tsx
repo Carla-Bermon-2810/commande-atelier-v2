@@ -16,12 +16,15 @@ import {
 
 import CartButton from "@/components/panier/CartButton";
 import { useCart } from "@/context/cart-context";
+import StockAlertBadge from "@/components/stock/StockAlertBadge";
+import { useStockAlerts } from "@/lib/stock-alerts-client";
 
 export default function Header() {
   const pathname = usePathname();
   const { totalItems } = useCart();
   const [isAdmin, setIsAdmin] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+  const { data: stockAlerts } = useStockAlerts();
 
   useEffect(() => {
     fetch("/api/access")
@@ -77,6 +80,7 @@ export default function Header() {
               >
                 <Icon size={20} aria-hidden="true" />
                 {item.label}
+                {item.href === "/stock" && <span className="ml-auto"><StockAlertBadge group={stockAlerts?.global} compact /></span>}
               </Link>
             );
           })}
@@ -150,7 +154,7 @@ export default function Header() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            return <Link key={item.href} href={item.href} className={`flex h-[5rem] items-center gap-2 border-b-2 px-1 text-sm font-semibold ${active ? "border-[#F95516] text-[#F95516]" : "border-transparent text-slate-700 hover:text-[#F95516]"}`}><Icon size={19} />{item.label}</Link>;
+            return <Link key={item.href} href={item.href} className={`relative flex h-[5rem] items-center gap-2 border-b-2 px-1 text-sm font-semibold ${active ? "border-[#F95516] text-[#F95516]" : "border-transparent text-slate-700 hover:text-[#F95516]"}`}><Icon size={19} />{item.label}{item.href === "/stock" && <StockAlertBadge group={stockAlerts?.global} compact />}</Link>;
           })}
         </nav>
 
@@ -185,7 +189,7 @@ export default function Header() {
           { href: "/panier", label: "Panier", icon: ShoppingCart },
         ].map(({ href, label, icon: Icon }) => {
           const active = href === "/#catalogue" ? false : isActive(href);
-          return <Link key={label} href={href} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold ${active ? "text-[#F95516]" : "text-slate-600"}`}><Icon size={21} aria-hidden="true" />{label}{label === "Panier" && totalItems > 0 && <span className="absolute right-3 top-1 rounded-full bg-[#F95516] px-1.5 text-[10px] text-white">{totalItems}</span>}</Link>;
+          return <Link key={label} href={href} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold ${active ? "text-[#F95516]" : "text-slate-600"}`}><Icon size={21} aria-hidden="true" />{label}{label === "Panier" && totalItems > 0 && <span className="absolute right-3 top-1 rounded-full bg-[#F95516] px-1.5 text-[10px] text-white">{totalItems}</span>}{label === "Stock" && <span className="absolute right-3 top-1"><StockAlertBadge group={stockAlerts?.global} compact /></span>}</Link>;
         })}
       </nav>
     </>

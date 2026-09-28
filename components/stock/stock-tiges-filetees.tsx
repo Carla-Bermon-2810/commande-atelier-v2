@@ -21,6 +21,7 @@ import {
   calculateStockAlertStatus,
   type StockAlertDisplayStatus,
 } from "@/lib/stock-alerts";
+import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
 
 type Tige = {
   id: number;
@@ -272,6 +273,7 @@ export default function StockTigesFiletees() {
       const { data, error } = stockResult;
       if (error) throw error;
       setTiges((data ?? []) as Tige[]);
+      notifyStockAlertsUpdated();
       if (!seuilsResult.ok) throw new Error("Le stock est chargé, mais les seuils de longueur sont indisponibles.");
       const payload = await seuilsResult.json() as { seuils?: Array<{ reference_key: string; seuil_mm: number }> };
       setSeuils(Object.fromEntries((payload.seuils ?? []).map((seuil) => [seuil.reference_key, Number(seuil.seuil_mm)])));
@@ -678,6 +680,7 @@ export default function StockTigesFiletees() {
       if (error) throw new Error(error.message);
 
       setTiges((precedentes) => precedentes.filter((item) => item.id !== tige.id));
+      notifyStockAlertsUpdated();
     } catch (error: any) {
       console.error("Erreur suppression tige :", error);
       setErreur(error?.message || "Impossible de supprimer cette tige.");

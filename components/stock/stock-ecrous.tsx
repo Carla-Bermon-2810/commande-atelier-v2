@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -114,6 +115,7 @@ export default function StockEcrous() {
     );
 
     setEcrous(ecrousConvertis);
+    notifyStockAlertsUpdated();
     setChargement(false);
   }
 

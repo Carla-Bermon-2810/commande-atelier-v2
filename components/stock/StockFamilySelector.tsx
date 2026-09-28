@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Boxes } from "lucide-react";
 import BackButton from "@/components/layout/BackButton";
+import StockAlertBadge from "@/components/stock/StockAlertBadge";
+import { useStockAlerts } from "@/lib/stock-alerts-client";
 
 type StockFamilyItem = {
   href: string;
@@ -16,9 +20,11 @@ type Props = {
   title: string;
   description: string;
   items: StockFamilyItem[];
+  category?: string;
 };
 
-export default function StockFamilySelector({ backHref, eyebrow, title, description, items }: Props) {
+export default function StockFamilySelector({ backHref, eyebrow, title, description, items, category = title }: Props) {
+  const { data } = useStockAlerts();
   return (
     <main className="mx-auto max-w-7xl py-4">
       <BackButton href={backHref} />
@@ -34,7 +40,7 @@ export default function StockFamilySelector({ backHref, eyebrow, title, descript
               </div>
             </div>
           </div>
-          <span className="w-fit rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{items.length} famille{items.length > 1 ? "s" : ""} disponible{items.length > 1 ? "s" : ""}</span>
+          <span className="flex w-fit items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600"><StockAlertBadge group={data?.parCategorie[category]} />{items.length} famille{items.length > 1 ? "s" : ""} disponible{items.length > 1 ? "s" : ""}</span>
         </div>
       </section>
 
@@ -46,7 +52,7 @@ export default function StockFamilySelector({ backHref, eyebrow, title, descript
             </div>
             <div className="p-4">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#F95516]">Suivi atelier</p>
-              <h2 className="mt-2 text-xl font-bold text-[#2F3437]">{item.title}</h2>
+              <div className="mt-2 flex items-center justify-between gap-3"><h2 className="text-xl font-bold text-[#2F3437]">{item.title}</h2><StockAlertBadge group={data?.parFamille[`${category}:${item.title}`]} /></div>
               <p className="mt-2 min-h-10 text-sm text-slate-500">{item.detail}</p>
               <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-bold text-[#F95516]">Ouvrir le suivi<span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 transition group-hover:bg-[#F95516] group-hover:text-white"><ArrowUpRight size={20} /></span></div>
             </div>

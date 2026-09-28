@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
 
 type Insert = {
   id: number;
@@ -111,6 +112,7 @@ export default function StockInserts() {
     }));
 
     setInserts(lignes);
+    notifyStockAlertsUpdated();
     setChargement(false);
   }
 
