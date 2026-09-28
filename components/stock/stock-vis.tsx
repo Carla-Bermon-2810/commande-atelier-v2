@@ -27,6 +27,32 @@ type Vis = {
   seuilBoites: number;
 };
 
+function getStock(item: Vis) {
+  return item.boitesPleines * item.piecesParBoite + item.piecesRestantes;
+}
+
+function getPourcentage(item: Vis) {
+  const seuilPieces = item.seuilBoites * item.piecesParBoite;
+
+  if (seuilPieces <= 0) return getStock(item) > 0 ? 100 : 0;
+
+  return Math.min(100, Math.round((getStock(item) / seuilPieces) * 100));
+}
+
+function getStatut(item: Vis) {
+  const stock = getStock(item);
+  const minimum = item.seuilBoites * item.piecesParBoite;
+
+  if (stock === 0) return "rupture";
+  if (stock < minimum) return "recommander";
+
+  return "ok";
+}
+
+function messageErreur(error: unknown) {
+  return error instanceof Error ? error.message : "erreur inconnue";
+}
+
 export default function StockVis() {
   const [vis, setVis] = useState<Vis[]>([]);
 
@@ -110,38 +136,6 @@ export default function StockVis() {
     setModal(null);
     setVisSelectionnee(null);
     setQuantite("");
-  }
-
-  function getStock(item: Vis) {
-    return (
-      item.boitesPleines * item.piecesParBoite +
-      item.piecesRestantes
-    );
-  }
-
-  function getMaximum(item: Vis) {
-    return 4 * item.piecesParBoite;
-  }
-
-  function getPourcentage(item: Vis) {
-    const maximum = getMaximum(item);
-
-    if (maximum <= 0) return 0;
-
-    return Math.min(
-      100,
-      Math.round((getStock(item) / maximum) * 100)
-    );
-  }
-
-  function getStatut(item: Vis) {
-    const stock = getStock(item);
-    const minimum = item.seuilBoites * item.piecesParBoite;
-
-    if (stock === 0) return "rupture";
-    if (stock < minimum) return "recommander";
-
-    return "ok";
   }
 
   // ============================================================
@@ -263,12 +257,12 @@ export default function StockVis() {
 
       await chargerVis();
       fermerModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur sortie :", error);
 
       alert(
         "Une erreur est survenue : " +
-          (error?.message || "erreur inconnue")
+          messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -322,12 +316,12 @@ export default function StockVis() {
 
       await chargerVis();
       fermerModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur ajustement :", error);
 
       alert(
         "Une erreur est survenue : " +
-          (error?.message || "erreur inconnue")
+          messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -407,12 +401,12 @@ export default function StockVis() {
       setNouveauSeuil("2");
 
       fermerModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur création référence :", error);
 
       alert(
         "Une erreur est survenue : " +
-          (error?.message || "erreur inconnue")
+          messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -457,12 +451,12 @@ export default function StockVis() {
 
       await chargerVis();
       fermerModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur suppression :", error);
 
       alert(
         "Une erreur est survenue : " +
-          (error?.message || "erreur inconnue")
+          messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -507,37 +501,39 @@ export default function StockVis() {
   // ============================================================
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-[1500px] px-3 py-4 sm:p-6 lg:p-8">
 
       {/* EN-TÊTE */}
 
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Package
-              size={32}
-              className="text-[#F95516]"
-            />
-
-            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
-              Stock vis
-            </h1>
+      <section className="mb-6 flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:mb-8 sm:px-7 sm:py-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#17232b] text-white shadow-sm">
+            <Package size={27} />
           </div>
 
-          <p className="mt-2 text-slate-500">
-            Gestion des vis disponibles dans l&apos;atelier
-          </p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#F95516]">
+              Stock · Fixations
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#17232b] sm:text-4xl">
+              Vis
+            </h1>
+
+            <p className="mt-1.5 text-sm text-slate-500 sm:text-base">
+              Suivez les références, conditionnements et niveaux disponibles dans l&apos;atelier.
+            </p>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={() => setModal("ajouter")}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto"
+          className="flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] lg:w-auto"
         >
           <Plus size={20} />
           Ajouter une référence
         </button>
-      </div>
+      </section>
 
       {/* STOCK */}
 
@@ -556,7 +552,7 @@ export default function StockVis() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">
+            <div className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
               {visFiltres.length} / {vis.length} référence(s)
             </div>
           </div>
@@ -593,9 +589,13 @@ export default function StockVis() {
                     : "recommander"
                 )
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
+              className={`rounded-2xl border p-4 text-left transition ${
+                nombreRecommander > 0
+                  ? "border-orange-200 bg-orange-50/70 hover:border-orange-300"
+                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRecommander > 0 ? "text-orange-700" : "text-slate-600"}`}>
                 <AlertTriangle size={18} />
                 À recommander
               </div>
@@ -614,9 +614,13 @@ export default function StockVis() {
                     : "rupture"
                 )
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
+              className={`rounded-2xl border p-4 text-left transition ${
+                nombreRupture > 0
+                  ? "border-red-200 bg-red-50/70 hover:border-red-300"
+                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRupture > 0 ? "text-red-700" : "text-slate-600"}`}>
                 <XCircle size={18} />
                 Rupture
               </div>
@@ -725,11 +729,20 @@ export default function StockVis() {
               const stock = getStock(item);
               const pourcentage =
                 getPourcentage(item);
+              const statut = getStatut(item);
+              const seuilPieces = item.seuilBoites * item.piecesParBoite;
+              const ecartSeuil = stock - seuilPieces;
 
               return (
                 <div
                   key={item.id}
-                  className="px-6 py-6 transition hover:bg-slate-50/60"
+                  className={`px-5 py-6 transition sm:px-6 ${
+                    statut === "rupture"
+                      ? "bg-red-50/70 hover:bg-red-50"
+                      : statut === "recommander"
+                        ? "bg-orange-50/70 hover:bg-orange-50"
+                        : "bg-white hover:bg-slate-50/60"
+                  }`}
                 >
 
                   <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -740,8 +753,8 @@ export default function StockVis() {
 
                       <div className="flex flex-wrap items-center gap-3">
 
-                        <h3 className="text-lg font-bold text-[#2F3437]">
-                          {item.reference}
+                        <h3 className="text-lg font-bold text-[#17232b]">
+                          {item.designation || item.reference}
                         </h3>
 
                         {renderStatut(item)}
@@ -749,6 +762,14 @@ export default function StockVis() {
                       </div>
 
                       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+
+                        {item.designation &&
+                          item.designation !== item.reference && (
+                            <span>
+                              Réf. :{" "}
+                              <strong>{item.reference}</strong>
+                            </span>
+                          )}
 
                         <span>
                           Matière :{" "}
@@ -765,20 +786,23 @@ export default function StockVis() {
                         </span>
 
                         <span>
-                          {item.piecesParBoite} pièces / boîte
+                          Conditionnement :{" "}
+                          <strong>
+                            {item.piecesParBoite.toLocaleString("fr-FR")} pièces / boîte
+                          </strong>
                         </span>
 
                       </div>
 
                       {/* STOCK */}
 
-                      <div className="mt-5 max-w-2xl">
+                      <div className="mt-5 w-full max-w-none rounded-2xl border border-slate-200/80 bg-white/75 p-4 shadow-sm">
 
                         <div className="flex items-end justify-between">
 
                           <div>
                             <div className="text-sm font-semibold text-slate-600">
-                              Stock
+                              Stock disponible
                             </div>
 
                             <div className="mt-1 text-2xl font-bold text-[#2F3437]">
@@ -792,10 +816,16 @@ export default function StockVis() {
                           <div className="text-right">
 
                             <div className="text-sm text-slate-500">
-                              Remplissage
+                              Couverture du seuil minimum
                             </div>
 
-                            <div className="text-lg font-bold text-[#F95516]">
+                            <div className={`text-lg font-bold ${
+                              statut === "rupture"
+                                ? "text-red-700"
+                                : statut === "recommander"
+                                  ? "text-[#F95516]"
+                                  : "text-[#17232b]"
+                            }`}>
                               {pourcentage} %
                             </div>
 
@@ -803,9 +833,18 @@ export default function StockVis() {
 
                         </div>
 
-                        <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100"
+                          aria-label={`Couverture du seuil minimum : ${pourcentage} %`}
+                        >
                           <div
-                            className="h-full rounded-full bg-[#F95516] transition-all"
+                            className={`h-full rounded-full transition-all ${
+                              statut === "rupture"
+                                ? "bg-red-500"
+                                : statut === "recommander"
+                                  ? "bg-[#F95516]"
+                                  : "bg-[#17232b]"
+                            }`}
                             style={{
                               width: `${pourcentage}%`,
                             }}
@@ -815,19 +854,33 @@ export default function StockVis() {
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
 
                           <span>
-                            📦{" "}
+                            Boîtes complètes :{" "}
                             <strong className="text-slate-700">
                               {item.boitesPleines}
-                            </strong>{" "}
-                            boîte(s) pleine(s)
+                            </strong>
                           </span>
 
                           <span>
-                            Minimum :{" "}
+                            Seuil minimum :{" "}
                             <strong className="text-slate-700">
-                              {item.seuilBoites} boîte(s)
+                              {item.seuilBoites} boîte(s) · {seuilPieces.toLocaleString("fr-FR")} pièces
                             </strong>
                           </span>
+
+                          {seuilPieces > 0 ? (
+                            <span className={`w-full text-xs font-medium ${
+                              ecartSeuil < 0
+                                ? "text-[#c2410c]"
+                                : "text-slate-500"
+                            }`}>
+                              Écart au seuil : {ecartSeuil >= 0 ? "+" : ""}
+                              {ecartSeuil.toLocaleString("fr-FR")} pièces
+                            </span>
+                          ) : (
+                            <span className="w-full text-xs text-slate-400">
+                              Aucun seuil minimum défini pour cette référence.
+                            </span>
+                          )}
 
                         </div>
 
@@ -837,7 +890,7 @@ export default function StockVis() {
 
                     {/* ACTIONS */}
 
-                    <div className="flex flex-nowrap items-center gap-2 xl:w-auto xl:justify-end">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
 
                       <button
                         type="button"

@@ -51,6 +51,12 @@ const insertsInitiaux = [
 const dimensions = ["M3", "M4", "M5", "M6", "M8", "M10"];
 const matieres = ["Acier", "Inox"];
 
+function messageErreur(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Impossible de supprimer cette référence.";
+}
+
 export default function StockInserts() {
   const [inserts, setInserts] = useState<Insert[]>([]);
 
@@ -82,10 +88,6 @@ export default function StockInserts() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
 
-  useEffect(() => {
-    chargerInserts();
-  }, []);
-
   async function chargerInserts() {
     setChargement(true);
     setErreur("");
@@ -116,6 +118,14 @@ export default function StockInserts() {
     setChargement(false);
   }
 
+  useEffect(() => {
+    const identifiant = window.setTimeout(() => {
+      void chargerInserts();
+    }, 0);
+
+    return () => window.clearTimeout(identifiant);
+  }, []);
+
   function getStatut(item: Insert) {
     if (item.quantite === 0) return "rupture";
 
@@ -127,11 +137,11 @@ export default function StockInserts() {
   }
 
   function getPourcentage(item: Insert) {
-    const maximum = Math.max(item.seuilMinimum * 4, 100);
+    if (item.seuilMinimum <= 0) return item.quantite > 0 ? 100 : 0;
 
     return Math.min(
       100,
-      Math.round((item.quantite / maximum) * 100)
+      Math.round((item.quantite / item.seuilMinimum) * 100)
     );
   }
 
@@ -225,12 +235,11 @@ export default function StockInserts() {
       setInserts((anciens) =>
         anciens.filter((insert) => insert.id !== item.id)
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur suppression insert :", error);
 
       setErreur(
-        error?.message ||
-          "Impossible de supprimer cette référence."
+        messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -508,37 +517,30 @@ export default function StockInserts() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-[1500px] px-3 py-4 sm:p-6 lg:p-8">
 
       {/* EN-TÊTE */}
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+      <section className="mb-6 flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:mb-8 sm:px-7 sm:py-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <Package
-              size={32}
-              className="text-[#F95516]"
-            />
-
-            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
-              Stock inserts
-            </h1>
+          <div className="flex items-center gap-4">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#17232b] text-white shadow-sm"><Package size={27} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#F95516]">Stock · Fixations</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-[#17232b] sm:text-4xl">Inserts</h1></div>
           </div>
 
           <p className="mt-2 text-slate-500">
-            Gestion des inserts disponibles dans
-            l&apos;atelier
+            Suivez les références, dimensions et niveaux disponibles dans l&apos;atelier.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setModal("ajouter")}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto"
+          className="flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] lg:w-auto"
         >
           <Plus size={20} />
           Ajouter une référence
         </button>
-      </div>
+      </section>
 
       {/* ERREUR */}
       {erreur && (
@@ -591,7 +593,7 @@ export default function StockInserts() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">
+            <div className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
               {insertsFiltres.length} /{" "}
               {inserts.length} référence(s)
             </div>
@@ -620,9 +622,9 @@ export default function StockInserts() {
               onClick={() =>
                 setStatutFiltre("recommander")
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
+              className={`rounded-2xl border p-4 text-left transition ${nombreRecommander > 0 ? "border-orange-200 bg-orange-50/70 hover:border-orange-300" : "border-slate-200 bg-slate-50 hover:border-slate-300"}`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRecommander > 0 ? "text-orange-700" : "text-slate-600"}`}>
                 <AlertTriangle size={18} />
                 À recommander
               </div>
@@ -637,9 +639,9 @@ export default function StockInserts() {
               onClick={() =>
                 setStatutFiltre("rupture")
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
+              className={`rounded-2xl border p-4 text-left transition ${nombreRupture > 0 ? "border-red-200 bg-red-50/70 hover:border-red-300" : "border-slate-200 bg-slate-50 hover:border-slate-300"}`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRupture > 0 ? "text-red-700" : "text-slate-600"}`}>
                 <XCircle size={18} />
                 Rupture
               </div>
@@ -723,11 +725,13 @@ export default function StockInserts() {
           {insertsFiltres.map((item) => {
             const pourcentage =
               getPourcentage(item);
+            const statut = getStatut(item);
+            const ecartSeuil = item.quantite - item.seuilMinimum;
 
             return (
               <div
                 key={item.id}
-                className="px-6 py-6 transition hover:bg-slate-50/60"
+                className={`px-5 py-6 transition sm:px-6 ${statut === "rupture" ? "bg-red-50/70 hover:bg-red-50" : statut === "recommander" ? "bg-orange-50/70 hover:bg-orange-50" : "bg-white hover:bg-slate-50/60"}`}
               >
                 <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
 
@@ -760,13 +764,13 @@ export default function StockInserts() {
                     </div>
 
                     {/* STOCK */}
-                    <div className="mt-5 max-w-2xl">
+                    <div className="mt-5 w-full max-w-none rounded-2xl border border-slate-200/80 bg-white/75 p-4 shadow-sm">
 
                       <div className="flex items-end justify-between">
 
                         <div>
                           <div className="text-sm font-semibold text-slate-600">
-                            Stock
+                            Stock disponible
                           </div>
 
                           <div className="mt-1 text-2xl font-bold text-[#2F3437]">
@@ -779,36 +783,38 @@ export default function StockInserts() {
 
                         <div className="text-right">
                           <div className="text-sm text-slate-500">
-                            Remplissage
+                            Couverture du seuil minimum
                           </div>
 
-                          <div className="text-lg font-bold text-[#F95516]">
+                          <div className={`text-lg font-bold ${statut === "rupture" ? "text-red-700" : statut === "recommander" ? "text-[#F95516]" : "text-[#17232b]"}`}>
                             {pourcentage} %
                           </div>
                         </div>
                       </div>
 
                       {/* BARRE */}
-                      <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
+                      <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100" aria-label={`Couverture du seuil minimum : ${pourcentage} %`}>
                         <div
-                          className="h-full rounded-full bg-[#F95516] transition-all"
+                          className={`h-full rounded-full transition-all ${statut === "rupture" ? "bg-red-500" : statut === "recommander" ? "bg-[#F95516]" : "bg-[#17232b]"}`}
                           style={{
                             width: `${pourcentage}%`,
                           }}
                         />
                       </div>
 
-                      <div className="mt-3 text-sm text-slate-500">
-                        Minimum :{" "}
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
+                        <span>Seuil minimum :{" "}
                         <strong className="text-slate-700">
                           {item.seuilMinimum} pièces
                         </strong>
+                        </span>
+                        {item.seuilMinimum > 0 ? <span className={`w-full text-xs font-medium ${ecartSeuil < 0 ? "text-[#c2410c]" : "text-slate-500"}`}>Écart au seuil : {ecartSeuil >= 0 ? "+" : ""}{ecartSeuil.toLocaleString("fr-FR")} pièces</span> : <span className="w-full text-xs text-slate-400">Aucun seuil minimum défini pour cette référence.</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* ACTIONS */}
-                  <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
 
                     {/* SORTIE */}
                     <button
