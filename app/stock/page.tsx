@@ -1,102 +1,37 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Package } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, CircleAlert, Layers3, Package, SlidersHorizontal, TriangleAlert } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import StockAlertBadge from "@/components/stock/StockAlertBadge";
 import { useStockAlerts } from "@/lib/stock-alerts-client";
 
 const categories = [
-  {
-    href: "/stock/tubes",
-    title: "Tubes",
-    description: "Tubes acier, inox et aluminium",
-    badge: "Acier · Inox · Aluminium",
-    image: "/tube.jpg",
-  },
-  {
-    href: "/stock/tiges-filetees",
-    title: "Tiges filetées",
-    description: "Tiges filetées et barres filetées",
-    badge: "Tiges filetées · Barres",
-    image: "/tige filete.webp",
-  },
-  {
-    href: "/stock/fixations",
-    title: "Fixations",
-    description: "Références conditionnées et seuils minimum",
-    badge: "Vis · Écrous · Inserts · Rivets",
-    image: "/fixation.png",
-  },
-  {
-    href: "/stock/outillage",
-    title: "Outillage",
-    description: "Sélection par diamètre et type d’outil",
-    badge: "Forets · Fraises · Tarauds",
-    image: "/outillage.png",
-  },
+  { href: "/stock/tubes", title: "Tubes", description: "Tubes acier, inox et aluminium", badge: "Acier · Inox · Aluminium", image: "/tube.jpg" },
+  { href: "/stock/tiges-filetees", title: "Tiges filetées", description: "Tiges filetées et barres filetées", badge: "Tiges filetées · Barres", image: "/tige filete.webp" },
+  { href: "/stock/fixations", title: "Fixations", description: "Références conditionnées et seuils minimum", badge: "Vis · Écrous · Inserts · Rivets", image: "/fixation.png" },
+  { href: "/stock/outillage", title: "Outillage", description: "Sélection par diamètre et type d’outil", badge: "Forets · Fraises · Tarauds", image: "/outillage.png" },
 ];
 
+function KpiCard({ label, value, detail, tone = "slate", icon: Icon }: { label: string; value: number; detail: string; tone?: "slate" | "orange" | "red"; icon: typeof Package }) {
+  const tones = { slate: "border-slate-200 bg-white text-[#17232b]", orange: "border-orange-200 bg-orange-50/70 text-[#c43f10]", red: "border-red-200 bg-red-50/70 text-red-700" };
+  const iconTones = { slate: "bg-slate-100 text-slate-600", orange: "bg-orange-100 text-[#F95516]", red: "bg-red-100 text-red-600" };
+  return <article className={`min-w-0 rounded-2xl border p-4 shadow-sm sm:p-5 ${tones[tone]}`}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p><p className="mt-2 text-3xl font-black tracking-tight">{value.toLocaleString("fr-FR")}</p></div><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTones[tone]}`}><Icon size={20} aria-hidden="true" /></span></div><p className="mt-2 text-xs font-medium text-slate-500">{detail}</p></article>;
+}
+
 export default function StockPage() {
-  const { data } = useStockAlerts();
-  return (
-    <AppLayout>
-      <div className="w-full px-1 py-5 sm:px-3 sm:py-7 lg:px-5 lg:py-8">
-        <section className="mb-5 rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-5">
-          <p className="text-xs font-bold uppercase tracking-[0.19em] text-[#F95516]">Espace de travail</p>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fff1e9] text-[#F95516]">
-              <Package size={25} strokeWidth={2.2} aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[#17232b] sm:text-3xl">Stock atelier</h1>
-              <p className="mt-1 text-sm text-slate-500 sm:text-base">Consultez les quantités disponibles par famille.</p>
-            </div>
-            <Link href="/stock/alertes" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-bold text-[#c43f10] hover:bg-orange-100"><StockAlertBadge group={data?.global} />Centre d’alertes</Link>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
-          {categories.map((category) => (
-            <Link
-              key={category.href}
-              href={category.href}
-              className="group relative flex min-h-[23rem] flex-col justify-between overflow-hidden rounded-xl border border-slate-200 bg-[#172025] p-5 text-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F95516] sm:min-h-[25rem] sm:p-6"
-            >
-              <Image
-                src={category.image}
-                alt=""
-                fill
-                sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,18,23,.18)_0%,rgba(10,18,23,.08)_30%,rgba(10,18,23,.74)_65%,rgba(10,18,23,.98)_100%)]" />
-
-              <span className="relative z-10 flex w-fit max-w-full items-center gap-2 rounded-full bg-[#293741]/90 px-4 py-2 text-xs font-semibold text-white shadow-sm backdrop-blur-sm">
-                <StockAlertBadge group={data?.parCategorie[category.title]} />{category.badge}
-              </span>
-
-              <div className="relative z-10">
-                <p className="text-xs font-bold uppercase tracking-wide text-[#ff8053]">Gestion stock</p>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">{category.title}</h2>
-                <p className="mt-1 min-h-12 max-w-[17rem] text-sm leading-snug text-slate-200 sm:text-base">
-                  {category.description}
-                </p>
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <span className="inline-flex min-h-10 min-w-[11rem] items-center rounded-full bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-sm">
-                    Ouvrir le suivi
-                  </span>
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F95516] text-white transition-transform group-hover:translate-x-1">
-                    <ArrowRight size={21} aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </AppLayout>
-  );
+  const { data, isLoading } = useStockAlerts();
+  const metrics = data?.indicateurs;
+  return <AppLayout><div className="mx-auto max-w-[1500px] py-2 sm:py-4 lg:py-7">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-5 px-5 py-6 sm:px-7 sm:py-7 lg:flex-row lg:items-center lg:justify-between"><div className="flex min-w-0 items-start gap-4"><span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-[#172025] text-white shadow-[0_8px_20px_rgba(23,32,37,.15)]"><Package size={25} aria-hidden="true" /></span><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Gestion atelier</p><h1 className="mt-1 text-3xl font-black tracking-tight text-[#17232b] sm:text-4xl">Stock atelier</h1><p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">Consultez les références, les seuils et les priorités d’approvisionnement.</p></div></div><Link href="/stock/alertes" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-5 text-sm font-bold text-white shadow-[0_10px_20px_rgba(249,85,22,.20)] transition hover:-translate-y-0.5 hover:bg-[#e04d13] focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"><CircleAlert size={19} /><span>Centre d’alertes</span><StockAlertBadge group={data?.global} /></Link></div>
+      <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3 sm:px-7"><p className="flex items-center gap-2 text-xs font-semibold text-slate-500"><SlidersHorizontal size={15} className="text-[#F95516]" /> Les alertes sont calculées automatiquement à partir du stock réel et des seuils configurés.</p></div>
+    </section>
+    <section aria-label="Indicateurs du stock" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"><KpiCard label="Références suivies" value={metrics?.referencesSuivies ?? 0} detail={isLoading ? "Chargement…" : "Références couvertes par le moteur"} icon={Layers3} /><KpiCard label="À traiter" value={metrics?.alertes ?? 0} detail="Références sous leur seuil ou en rupture" tone="orange" icon={CircleAlert} /><KpiCard label="Ruptures" value={metrics?.ruptures ?? 0} detail="À traiter en priorité" tone="red" icon={TriangleAlert} /><KpiCard label="Seuil à définir" value={metrics?.seuilsNonDefinis ?? 0} detail="Longueurs sans seuil configuré" icon={SlidersHorizontal} /></section>
+    <div className="mt-8 flex flex-wrap items-end justify-between gap-3 sm:mt-10"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#F95516]">Explorer le stock</p><h2 className="mt-1 text-2xl font-black tracking-tight text-[#17232b] sm:text-3xl">Familles de stock</h2></div><p className="text-sm font-medium text-slate-500">Choisissez une famille pour consulter le détail.</p></div>
+    <section className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">{categories.map((category) => { const group = data?.parCategorie[category.title]; const rupture = group?.severiteMaximale === "rupture"; return <Link key={category.href} href={category.href} className="group relative flex min-h-[19rem] flex-col justify-end overflow-hidden rounded-2xl border border-slate-200 bg-[#172025] p-5 text-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#F95516] hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F95516] sm:min-h-[21rem]"><Image src={category.image} alt="" fill sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,18,23,.08)_0%,rgba(10,18,23,.12)_32%,rgba(10,18,23,.78)_72%,rgba(10,18,23,.97)_100%)]" /><div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-2rem)] items-center gap-2"><span className="rounded-full bg-[#172025]/80 px-3 py-1.5 text-[11px] font-bold text-slate-100 backdrop-blur-sm">{category.badge}</span>{group && group.nombreAlertes > 0 && <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold text-white shadow-sm ${rupture ? "bg-red-600" : "bg-[#F95516]"}`}><StockAlertBadge group={group} />alertes</span>}</div><div className="relative z-10"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#ff9b76]">Gestion stock</p><h3 className="mt-1 text-2xl font-black tracking-tight text-white">{category.title}</h3><p className="mt-1 min-h-10 text-sm leading-snug text-slate-200">{category.description}</p><div className="mt-5 flex items-center justify-between border-t border-white/15 pt-4"><span className="text-sm font-bold text-white">Ouvrir le suivi</span><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F95516] text-white transition-transform group-hover:translate-x-1"><ArrowRight size={19} aria-hidden="true" /></span></div></div></Link>; })}</section>
+    <Link href="/stock/alertes" className="mt-5 flex min-h-14 items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-[#17232b] shadow-sm transition hover:border-orange-200 hover:bg-orange-50 sm:px-6"><span className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-[#F95516]"><CircleAlert size={18} /></span>Voir toutes les références à traiter</span><ArrowUpRight size={19} className="text-[#F95516]" /></Link>
+  </div></AppLayout>;
 }

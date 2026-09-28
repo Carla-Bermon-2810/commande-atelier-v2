@@ -86,6 +86,12 @@ export async function GET() {
     return NextResponse.json({
       alertes,
       global: snapshot.global,
+      indicateurs: {
+        referencesSuivies: snapshot.global.nombreReferences,
+        alertes: snapshot.global.nombreAlertes,
+        ruptures: snapshot.alertes.filter((reference) => reference.statut === "rupture").length,
+        seuilsNonDefinis: snapshot.references.filter((reference) => reference.statut === "non_defini").length,
+      },
       parCategorie: Object.fromEntries(snapshot.parCategorie),
       parFamille: Object.fromEntries(snapshot.parFamille),
     }, { headers: { "Cache-Control": "no-store" } });

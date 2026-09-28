@@ -25,6 +25,12 @@ export type StockAlertView = StockAlertReference & {
 export type StockAlertsPayload = {
   alertes: StockAlertView[];
   global: StockAlertGroup;
+  indicateurs: {
+    referencesSuivies: number;
+    alertes: number;
+    ruptures: number;
+    seuilsNonDefinis: number;
+  };
   parCategorie: Record<string, StockAlertGroup>;
   parFamille: Record<string, StockAlertGroup>;
 };
