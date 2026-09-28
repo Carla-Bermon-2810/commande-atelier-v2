@@ -1,29 +1,23 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-
 import AppLayout from "@/components/layout/AppLayout";
+import BackButton from "@/components/layout/BackButton";
 import StockOutillage from "@/components/stock/stock-outillage";
+import Link from "next/link";
 
 export default function TaraudsPage() {
-  const router = useRouter();
-
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl">
-        <div className="pt-2">
-          <button
-            onClick={() => router.push("/stock/outillage")}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-[#F95516]"
-          >
-            <ArrowLeft size={18} />
-            Retour
-          </button>
-        </div>
-
-        <StockOutillage type="tarauds" />
-      </div>
+      <BackButton href="/stock/outillage" />
+      <nav
+        aria-label="Fil d’Ariane"
+        className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-500"
+      >
+        <Link href="/stock" className="transition hover:text-[#F95516]">Stock</Link>
+        <span aria-hidden="true" className="text-slate-300">/</span>
+        <Link href="/stock/outillage" className="transition hover:text-[#F95516]">Outillage</Link>
+        <span aria-hidden="true" className="text-slate-300">/</span>
+        <span className="text-[#17232b]">Tarauds</span>
+      </nav>
+      <StockOutillage type="tarauds" />
     </AppLayout>
   );
 }

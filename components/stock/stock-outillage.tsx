@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -29,27 +29,33 @@ type Outil = {
 
 const config = {
   forets: {
-    titre: "Stock forets",
+    titre: "Forets",
     description: "Gestion des forets disponibles dans l'atelier",
     table: "stock_forets",
     mouvementTable: "stock_mouvements_forets",
     mouvementId: "foret_id",
   },
   fraises: {
-    titre: "Stock fraises",
+    titre: "Fraises",
     description: "Gestion des fraises disponibles dans l'atelier",
     table: "stock_fraises",
     mouvementTable: "stock_mouvements_fraises",
     mouvementId: "fraise_id",
   },
   tarauds: {
-    titre: "Stock tarauds",
+    titre: "Tarauds",
     description: "Gestion des tarauds disponibles dans l'atelier",
     table: "stock_tarauds",
     mouvementTable: "stock_mouvements_tarauds",
     mouvementId: "taraud_id",
   },
 } as const;
+
+function messageErreur(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Impossible d’effectuer cette action.";
+}
 
 export default function StockOutillage({
   type,
@@ -79,11 +85,7 @@ export default function StockOutillage({
   const [quantite, setQuantite] = useState("");
   const [seuilMinimum, setSeuilMinimum] = useState("2");
 
-  useEffect(() => {
-    chargerStock();
-  }, [type]);
-
-  async function chargerStock() {
+  const chargerStock = useCallback(async () => {
     setChargement(true);
     setErreur("");
 
@@ -102,7 +104,15 @@ export default function StockOutillage({
     setOutils((data as Outil[]) || []);
     notifyStockAlertsUpdated();
     setChargement(false);
-  }
+  }, [currentConfig.table]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void chargerStock();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [chargerStock]);
 
   function getStatut(outil: Outil) {
     if (outil.quantite === 0) {
@@ -117,14 +127,15 @@ export default function StockOutillage({
   }
 
   function getPourcentage(outil: Outil) {
-    const maximum = Math.max(
-      outil.seuil_minimum * 4,
-      10
-    );
+    if (outil.seuil_minimum <= 0) {
+      return outil.quantite > 0 ? 100 : 0;
+    }
 
     return Math.min(
       100,
-      Math.round((outil.quantite / maximum) * 100)
+      Math.round(
+        (outil.quantite / outil.seuil_minimum) * 100
+      )
     );
   }
 
@@ -232,15 +243,14 @@ export default function StockOutillage({
       setOutils((anciens) =>
         anciens.filter((item) => item.id !== outil.id)
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(
         "Erreur suppression outil :",
         error
       );
 
       setErreur(
-        error?.message ||
-          "Impossible de supprimer cette référence."
+        messageErreur(error)
       );
     } finally {
       setChargement(false);
@@ -453,36 +463,36 @@ export default function StockOutillage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-[1500px] px-3 py-4 sm:p-6 lg:p-8">
 
       {/* EN-TÊTE */}
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Package
-              size={32}
-              className="text-[#F95516]"
-            />
-
-            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
+      <section className="mb-6 flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:mb-8 sm:px-7 sm:py-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#17232b] text-white shadow-sm">
+            <Package size={27} className="text-[#F95516]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">
+              Stock · Outillage
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#17232b] sm:text-4xl">
               {currentConfig.titre}
             </h1>
+            <p className="mt-1 text-sm text-slate-500 sm:text-base">
+              {currentConfig.description}
+            </p>
           </div>
-
-          <p className="mt-2 text-slate-500">
-            {currentConfig.description}
-          </p>
         </div>
 
         <button
           type="button"
           onClick={ouvrirAjout}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto"
+          className="flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] lg:w-auto"
         >
           <Plus size={20} />
           Ajouter une référence
         </button>
-      </div>
+      </section>
 
       {/* ERREUR */}
       {erreur && (
@@ -513,7 +523,7 @@ export default function StockOutillage({
               </p>
             </div>
 
-            <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">
+            <div className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
               {outilsFiltres.length} /{" "}
               {outils.length} référence(s)
             </div>
@@ -531,9 +541,13 @@ export default function StockOutillage({
                     : "ok"
                 )
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-green-200"
+              className={`rounded-2xl border p-4 text-left transition ${
+                nombreOK > 0
+                  ? "border-green-100 bg-green-50/60 hover:border-green-200"
+                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreOK > 0 ? "text-green-700" : "text-slate-600"}`}>
                 <CheckCircle2 size={18} />
                 Stock OK
               </div>
@@ -552,9 +566,13 @@ export default function StockOutillage({
                     : "recommander"
                 )
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-orange-200"
+              className={`rounded-2xl border p-4 text-left transition ${
+                nombreRecommander > 0
+                  ? "border-orange-100 bg-orange-50/70 hover:border-orange-200"
+                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-orange-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRecommander > 0 ? "text-orange-700" : "text-slate-600"}`}>
                 <AlertTriangle size={18} />
                 À recommander
               </div>
@@ -573,9 +591,13 @@ export default function StockOutillage({
                     : "rupture"
                 )
               }
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-red-200"
+              className={`rounded-2xl border p-4 text-left transition ${
+                nombreRupture > 0
+                  ? "border-red-100 bg-red-50/70 hover:border-red-200"
+                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
             >
-              <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
+              <div className={`flex items-center gap-2 text-sm font-semibold ${nombreRupture > 0 ? "text-red-700" : "text-slate-600"}`}>
                 <XCircle size={18} />
                 Rupture
               </div>
@@ -661,47 +683,76 @@ export default function StockOutillage({
             {outilsFiltres.map((outil) => {
               const pourcentage =
                 getPourcentage(outil);
+              const statut = getStatut(outil);
+              const fondLigne =
+                statut === "rupture"
+                  ? "bg-red-50/55"
+                  : statut === "recommander"
+                    ? "bg-orange-50/55"
+                    : "bg-white";
+              const couleurProgression =
+                statut === "rupture"
+                  ? "bg-red-500"
+                  : statut === "recommander"
+                    ? "bg-[#F95516]"
+                    : "bg-[#17232b]";
+              const ecartSeuil =
+                outil.quantite - outil.seuil_minimum;
 
               return (
                 <div
                   key={outil.id}
-                  className="px-6 py-6 transition hover:bg-slate-50/60"
+                  className={`px-5 py-5 transition sm:px-6 sm:py-6 ${fondLigne} hover:brightness-[0.985]`}
                 >
 
-                  <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
 
                     {/* INFORMATIONS */}
                     <div className="min-w-0 flex-1">
 
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
 
                         <h3 className="text-lg font-bold text-[#2F3437]">
                           {nomOutil(outil)}
                         </h3>
 
-                        <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                          {outil.dimension}
-                        </span>
-
-                        {type === "tarauds" &&
-                          outil.reference && (
-                            <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                              {outil.reference}
-                            </span>
-                          )}
-
                         {renderStatut(outil)}
 
                       </div>
 
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-slate-500">
+                        <span>
+                          Dimension :{" "}
+                          <strong className="font-semibold text-slate-700">
+                            {outil.dimension}
+                          </strong>
+                        </span>
+                        {outil.reference && (
+                          <span>
+                            Référence :{" "}
+                            <strong className="font-semibold text-slate-700">
+                              {outil.reference}
+                            </strong>
+                          </span>
+                        )}
+                        {type === "fraises" && outil.designation && (
+                          <span>
+                            Désignation :{" "}
+                            <strong className="font-semibold text-slate-700">
+                              {outil.designation}
+                            </strong>
+                          </span>
+                        )}
+                      </div>
+
                       {/* STOCK */}
-                      <div className="mt-5 max-w-2xl">
+                      <div className="mt-5 w-full max-w-none rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-sm">
 
                         <div className="flex items-end justify-between">
 
                           <div>
                             <div className="text-sm font-semibold text-slate-600">
-                              Stock
+                              Stock disponible
                             </div>
 
                             <div className="mt-1 text-2xl font-bold text-[#2F3437]">
@@ -714,7 +765,7 @@ export default function StockOutillage({
 
                           <div className="text-right">
                             <div className="text-sm text-slate-500">
-                              Remplissage
+                              Couverture du seuil
                             </div>
 
                             <div className="text-lg font-bold text-[#F95516]">
@@ -727,7 +778,7 @@ export default function StockOutillage({
                         {/* BARRE */}
                         <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className="h-full rounded-full bg-[#F95516] transition-all"
+                            className={`h-full rounded-full transition-all ${couleurProgression}`}
                             style={{
                               width: `${pourcentage}%`,
                             }}
@@ -735,12 +786,33 @@ export default function StockOutillage({
                         </div>
 
                         {/* MINIMUM */}
-                        <div className="mt-3 text-sm text-slate-500">
-                          Minimum :{" "}
-                          <strong className="text-slate-700">
-                            {outil.seuil_minimum}{" "}
-                            pièce(s)
-                          </strong>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-slate-500">
+                          <span>
+                            Seuil minimum :{" "}
+                            <strong className="text-slate-700">
+                              {outil.seuil_minimum}{" "}
+                              pièce(s)
+                            </strong>
+                          </span>
+                          {outil.seuil_minimum > 0 ? (
+                            <span>
+                              Écart au seuil :{" "}
+                              <strong
+                                className={
+                                  ecartSeuil >= 0
+                                    ? "text-emerald-700"
+                                    : "text-[#F95516]"
+                                }
+                              >
+                                {ecartSeuil >= 0 ? "+" : ""}
+                                {ecartSeuil.toLocaleString("fr-FR")} pièce(s)
+                              </strong>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">
+                              Seuil non défini
+                            </span>
+                          )}
                         </div>
 
                       </div>
@@ -748,7 +820,7 @@ export default function StockOutillage({
                     </div>
 
                     {/* ACTIONS */}
-                    <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 xl:flex-nowrap">
 
                       {/* SORTIE */}
                       <button
