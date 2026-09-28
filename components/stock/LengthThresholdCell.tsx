@@ -20,6 +20,7 @@ export function LengthThresholdCell({
 }) {
   const [value, setValue] = useState(seuil === null ? "" : String(seuil));
   const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<"saved" | "error" | null>(null);
 
   const normalized = value.trim();
   const nextValue = normalized === "" ? null : Number(normalized);
@@ -29,12 +30,14 @@ export function LengthThresholdCell({
   async function save() {
     if (!valid || !changed || saving) return;
     setSaving(true);
-    await onSave(nextValue);
+    setFeedback(null);
+    const saved = await onSave(nextValue);
+    setFeedback(saved ? "saved" : "error");
     setSaving(false);
   }
 
   return (
-    <div className="flex min-w-[190px] items-center gap-2">
+    <div className="flex min-w-[215px] items-center gap-2">
       <div className="relative min-w-0 flex-1">
         <input
           aria-label="Seuil de longueur en millimètres"
@@ -42,7 +45,10 @@ export function LengthThresholdCell({
           min="0"
           step="1"
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setFeedback(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") void save();
           }}
@@ -57,10 +63,12 @@ export function LengthThresholdCell({
         title={nextValue === null ? "Supprimer le seuil" : "Enregistrer le seuil"}
         onClick={() => void save()}
         disabled={!valid || !changed || saving}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-[#F95516] hover:text-[#F95516] disabled:cursor-not-allowed disabled:opacity-40"
+        className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed ${changed && valid ? "border-[#F95516] bg-[#F95516] text-white shadow-sm hover:bg-[#e04d13]" : "border-slate-200 bg-white text-slate-400 disabled:opacity-70"}`}
       >
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
       </button>
+      {feedback === "saved" && <span role="status" className="whitespace-nowrap text-xs font-semibold text-emerald-700">Enregistré</span>}
+      {feedback === "error" && <span role="alert" className="whitespace-nowrap text-xs font-semibold text-red-700">Erreur</span>}
     </div>
   );
 }

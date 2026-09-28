@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   Loader2,
   Package,
   Plus,
@@ -38,6 +41,7 @@ type StockTube = {
 
 type StockProps = {
   matiere?: "acier" | "inox" | "aluminium";
+  premiumLayout?: boolean;
 };
 
 type FormData = {
@@ -87,6 +91,10 @@ function normaliserNombre(value: string) {
   return value.replace(",", ".").trim();
 }
 
+function messageErreur(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function nomMatiere(value: string) {
   if (value === "acier") return "Acier";
   if (value === "inox") return "Inox";
@@ -118,6 +126,7 @@ function FragmentRow({
   onUse,
   onDelete,
   onSaveThreshold,
+  premiumLayout,
 }: {
   groupe: { key: string; items: StockTube[]; longueurTotale: number; seuil: number | null; statut: StockAlertDisplayStatus };
   exemple: StockTube;
@@ -128,10 +137,17 @@ function FragmentRow({
   onUse: (tube: StockTube) => void;
   onDelete: (tube: StockTube) => void;
   onSaveThreshold: (referenceKey: string, seuil: number | null) => Promise<boolean>;
+  premiumLayout?: boolean;
 }) {
+  const rowTone = groupe.statut === "rupture"
+    ? "bg-red-50/70 hover:bg-red-50"
+    : groupe.statut === "a_recommander"
+      ? "bg-orange-50/70 hover:bg-orange-50"
+      : "bg-white hover:bg-slate-50";
+  const morceauxDisponibles = groupe.items.filter((tube) => tube.statut === "disponible").length;
   return (
     <>
-      <tr className="border-b bg-white transition hover:bg-slate-50">
+      <tr className={`border-b transition ${premiumLayout ? rowTone : "bg-white hover:bg-slate-50"}`}>
         <td className="px-4 py-4">
           <button type="button" onClick={onToggle} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-[#F95516]" title={ouvert ? "Réduire" : "Voir les morceaux"}>
             {ouvert ? <ChevronDown size={19} /> : <ChevronRight size={19} />}
@@ -142,22 +158,18 @@ function FragmentRow({
         <td className="px-4 py-4 font-semibold">{exemple.type === "rond" ? `Ø ${exemple.section}` : exemple.section}</td>
         <td className="px-4 py-4">{exemple.epaisseur != null ? `${exemple.epaisseur} mm` : "—"}</td>
         <td className="px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700">{groupe.items.filter((t) => t.statut === "disponible").length} morceau(x)</span>
-            <span className="font-bold text-[#2F3437]">{groupe.longueurTotale} mm</span>
-          </div>
+          <span className="inline-flex whitespace-nowrap rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{morceauxDisponibles} morceau{morceauxDisponibles > 1 ? "x" : ""}</span>
         </td>
-        <td className="px-4 py-4">
-          <LengthThresholdCell
-            key={`${groupe.key}:${groupe.seuil ?? "non-defini"}`}
-            seuil={groupe.seuil}
-            onSave={(seuil) => onSaveThreshold(groupe.key, seuil)}
-          />
-        </td>
-        <td className="px-4 py-4">
-          <LengthStockStatusBadge statut={groupe.statut} />
-        </td>
-        <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
+        {premiumLayout ? <>
+          <td className="px-4 py-4 font-bold text-[#17232b]">{groupe.longueurTotale.toLocaleString("fr-FR")} mm</td>
+          <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
+          <td className="px-4 py-4"><LengthThresholdCell seuil={groupe.seuil} onSave={(seuil) => onSaveThreshold(groupe.key, seuil)} /></td>
+          <td className="px-4 py-4"><LengthStockStatusBadge statut={groupe.statut} /></td>
+        </> : <>
+          <td className="px-4 py-4"><LengthThresholdCell seuil={groupe.seuil} onSave={(seuil) => onSaveThreshold(groupe.key, seuil)} /></td>
+          <td className="px-4 py-4"><LengthStockStatusBadge statut={groupe.statut} /></td>
+          <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
+        </>}
         <td className="px-4 py-4">
           <span className="text-xs font-medium text-slate-400">{ouvert ? "Masquer" : "Détails"}</span>
         </td>
@@ -165,7 +177,7 @@ function FragmentRow({
 
       {ouvert && (
         <tr className="border-b bg-slate-50/70">
-          <td colSpan={10} className="px-10 py-3">
+          <td colSpan={premiumLayout ? 11 : 10} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
               {groupe.items.map((tube, index) => {
                 const estPlein = tube.statut === "disponible" && tube.parent_id == null;
@@ -208,7 +220,9 @@ function FragmentRow({
   );
 }
 
-export default function Stock({ matiere }: StockProps) {
+export default function Stock({ matiere, premiumLayout = false }: StockProps) {
+  const premiumMatiere = matiere ? nomMatiere(matiere) : "Tubes";
+  const premiumImage = matiere === "acier" ? "/tube acier.png" : matiere === "aluminium" ? "/tube alu.png" : "/tube inox.png";
   const [tubes, setTubes] = useState<StockTube[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
@@ -279,7 +293,8 @@ export default function Stock({ matiere }: StockProps) {
   }
 
   useEffect(() => {
-    chargerStock();
+    const timer = window.setTimeout(() => { void chargerStock(); }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function modifierChamp(champ: keyof FormData, valeur: string) {
@@ -369,8 +384,8 @@ export default function Stock({ matiere }: StockProps) {
         setModalOuverte(false);
         setMessage("");
       }, 700);
-    } catch (error: any) {
-      setErreur(error?.message || "Une erreur est survenue.");
+    } catch (error) {
+      setErreur(messageErreur(error, "Une erreur est survenue."));
     } finally {
       setEnregistrement(false);
     }
@@ -390,14 +405,6 @@ export default function Stock({ matiere }: StockProps) {
     setLongueurRestanteSaisie("");
     setErreurUtilisation("");
   }
-
-  const longueurRestante = longueurRestanteSaisie !== ""
-    ? Number(normaliserNombre(longueurRestanteSaisie))
-    : tubeUtilisation?.longueur_disponible ?? 0;
-
-  const longueurUtilisee = tubeUtilisation
-    ? tubeUtilisation.longueur_disponible - longueurRestante
-    : 0;
 
   async function genererNumeroRemnant(tubeSource: StockTube) {
     const racine = tubeSource.numero.split("-R")[0];
@@ -467,8 +474,8 @@ export default function Stock({ matiere }: StockProps) {
 
       await chargerStock();
       fermerUtilisation();
-    } catch (error: any) {
-      setErreurUtilisation(error?.message || "Une erreur est survenue pendant l’utilisation.");
+    } catch (error) {
+      setErreurUtilisation(messageErreur(error, "Une erreur est survenue pendant l’utilisation."));
     } finally {
       setEnregistrementUtilisation(false);
     }
@@ -515,10 +522,9 @@ export default function Stock({ matiere }: StockProps) {
       notifyStockAlertsUpdated();
       setMessage(`Tube ${tube.numero} retiré du stock.`);
       setTimeout(() => setMessage(""), 2500);
-    } catch (error: any) {
+    } catch (error) {
       setErreur(
-        error?.message ||
-          "Une erreur est survenue lors de la suppression du tube."
+        messageErreur(error, "Une erreur est survenue lors de la suppression du tube.")
       );
     }
   }
@@ -548,14 +554,21 @@ export default function Stock({ matiere }: StockProps) {
   const groupes = useMemo(() => {
     const map = new Map<string, StockTube[]>();
 
-    for (const tube of tubesCorrespondants) {
+    // La vue Inox conserve le total d'une référence logique malgré les filtres.
+    // Les écrans existants gardent exactement leur comportement historique.
+    const sourceGroupes = premiumLayout ? tubesPage : tubesCorrespondants;
+    for (const tube of sourceGroupes) {
       const key = buildTubeReferenceKey(tube);
       const groupe = map.get(key) ?? [];
       groupe.push(tube);
       map.set(key, groupe);
     }
 
-    return Array.from(map.entries()).map(([key, items]) => {
+    const entries = Array.from(map.entries());
+    const entriesVisibles = premiumLayout
+      ? entries.filter(([, items]) => items.some((tube) => tubesCorrespondants.some((correspondant) => correspondant.id === tube.id)))
+      : entries;
+    return entriesVisibles.map(([key, items]) => {
       const longueurTotale = items.reduce((total, tube) => total + (tube.statut === "disponible" ? Number(tube.longueur_disponible || 0) : 0), 0);
       const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
       return {
@@ -566,7 +579,26 @@ export default function Stock({ matiere }: StockProps) {
         statut: calculateStockAlertStatus(longueurTotale, seuil),
       };
     });
-  }, [tubesCorrespondants, seuils]);
+  }, [premiumLayout, tubesCorrespondants, seuils, tubesPage]);
+
+  const groupesMatiere = useMemo(() => {
+    const map = new Map<string, StockTube[]>();
+    for (const tube of tubesPage) {
+      const key = buildTubeReferenceKey(tube);
+      const items = map.get(key) ?? [];
+      items.push(tube);
+      map.set(key, items);
+    }
+    return Array.from(map.entries()).map(([key, items]) => {
+      const longueurTotale = items.reduce((total, tube) => total + (tube.statut === "disponible" ? Number(tube.longueur_disponible || 0) : 0), 0);
+      const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
+      return { statut: calculateStockAlertStatus(longueurTotale, seuil) };
+    });
+  }, [seuils, tubesPage]);
+
+  const morceauxDisponibles = tubesPage.filter((tube) => tube.statut === "disponible").length;
+  const alertesMatiere = groupesMatiere.filter((groupe) => groupe.statut === "a_recommander" || groupe.statut === "rupture").length;
+  const rupturesMatiere = groupesMatiere.filter((groupe) => groupe.statut === "rupture").length;
 
   async function enregistrerSeuil(referenceKey: string, seuil: number | null) {
     setErreur("");
@@ -611,32 +643,61 @@ export default function Stock({ matiere }: StockProps) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-6 lg:p-8">
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Package size={32} className="text-[#F95516]" />
-            <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
-              {matiere ? `Tubes — ${nomMatiere(matiere)}` : "Stock tubes"}
-            </h1>
+    <div className={`mx-auto px-3 py-4 sm:p-6 lg:p-8 ${premiumLayout ? "max-w-[1500px]" : "max-w-7xl"}`}>
+      {premiumLayout ? (
+        <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mb-8">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 sm:h-20 sm:w-20">
+                <Image src={premiumImage} alt={`Tube ${premiumMatiere.toLocaleLowerCase("fr-FR")}`} fill sizes="80px" className="object-cover" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Stock · Tubes</p>
+                <h1 className="mt-1 text-3xl font-black tracking-tight text-[#17232b] sm:text-4xl">Tubes — {premiumMatiere}</h1>
+                <p className="mt-2 text-sm text-slate-500 sm:text-base">Consultez et mettez à jour les longueurs disponibles dans l’atelier.</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
+              <div className="min-w-[132px] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center"><Package size={20} className="mx-auto text-slate-600" /><p className="mt-1 text-2xl font-black text-[#17232b]">{groupesMatiere.length}</p><p className="text-xs font-medium text-slate-500">références</p></div>
+              <div className="min-w-[132px] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center"><Ruler size={20} className="mx-auto text-slate-600" /><p className="mt-1 text-2xl font-black text-[#17232b]">{morceauxDisponibles}</p><p className="text-xs font-medium text-slate-500">morceau{morceauxDisponibles > 1 ? "x" : ""} en stock</p></div>
+              <div className={`min-w-[132px] rounded-xl border px-4 py-3 text-center ${rupturesMatiere > 0 ? "border-red-200 bg-red-50" : alertesMatiere > 0 ? "border-orange-200 bg-orange-50" : "border-emerald-200 bg-emerald-50"}`}>
+                {rupturesMatiere > 0 ? <AlertTriangle size={20} className="mx-auto text-red-600" /> : <CircleAlert size={20} className={`mx-auto ${alertesMatiere > 0 ? "text-[#F95516]" : "text-emerald-600"}`} />}
+                <p className={`mt-1 text-2xl font-black ${rupturesMatiere > 0 ? "text-red-700" : alertesMatiere > 0 ? "text-[#c43f10]" : "text-emerald-700"}`}>{alertesMatiere}</p>
+                <p className="text-xs font-medium text-slate-500">alerte{alertesMatiere > 1 ? "s" : ""}</p>
+              </div>
+              <button type="button" onClick={ouvrirReception} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-5 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(249,85,22,.20)] transition hover:-translate-y-0.5 hover:bg-[#e04d13] focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2">
+                <Plus size={20} /> Réceptionner un tube
+              </button>
+            </div>
           </div>
-          <p className="mt-2 text-slate-500">Gestion des tubes disponibles dans l&apos;atelier</p>
+        </section>
+      ) : (
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <Package size={32} className="text-[#F95516]" />
+              <h1 className="text-3xl font-bold text-[#2F3437] sm:text-4xl">
+                {matiere ? `Tubes — ${nomMatiere(matiere)}` : "Stock tubes"}
+              </h1>
+            </div>
+            <p className="mt-2 text-slate-500">Gestion des tubes disponibles dans l&apos;atelier</p>
+          </div>
+          <button type="button" onClick={ouvrirReception} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto">
+            <Plus size={20} /> Réceptionner un tube
+          </button>
         </div>
-        <button type="button" onClick={ouvrirReception} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#e04d13] sm:w-auto">
-          <Plus size={20} /> Réceptionner un tube
-        </button>
-      </div>
+      )}
 
       {erreur && !modalOuverte && <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><strong>Erreur :</strong> {erreur}</div>}
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-bold text-[#2F3437]">Tubes en stock</h2>
-              <p className="mt-1 text-sm text-slate-500">{tubesFiltres.filter((t) => t.statut === "disponible").length} morceau(x) disponible(s)</p>
+              <p className="mt-1 text-sm text-slate-500">{premiumLayout ? "Recherchez, filtrez et consultez les longueurs disponibles." : `${tubesFiltres.filter((t) => t.statut === "disponible").length} morceau(x) disponible(s)`}</p>
             </div>
-            <div className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-semibold text-[#F95516]">{tubesFiltres.length} / {tubesPage.length} tube(s)</div>
+            <div className={`rounded-xl px-4 py-2 text-sm font-semibold ${rupturesMatiere > 0 ? "bg-red-50 text-red-700" : alertesMatiere > 0 ? "bg-orange-50 text-[#F95516]" : "bg-slate-100 text-slate-600"}`}>{groupesMatiere.length} référence{groupesMatiere.length > 1 ? "s" : ""} · {morceauxDisponibles} morceau{morceauxDisponibles > 1 ? "x" : ""} · {alertesMatiere} alerte{alertesMatiere > 1 ? "s" : ""}</div>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -668,7 +729,7 @@ export default function Stock({ matiere }: StockProps) {
           <div className="p-16 text-center"><Search size={52} className="mx-auto text-slate-300" /><h2 className="mt-4 text-xl font-bold text-[#2F3437]">Aucun tube ne correspond aux filtres</h2><p className="mt-2 text-slate-500">Modifiez votre recherche ou réinitialisez les filtres.</p></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="min-w-[1180px] w-full text-left">
               <thead>
                 <tr className="border-b bg-slate-50 text-sm text-slate-500">
                   <th className="w-10 px-4 py-4"></th>
@@ -677,9 +738,16 @@ export default function Stock({ matiere }: StockProps) {
                   <th className="px-4 py-4">Section</th>
                   <th className="px-4 py-4">Épaisseur</th>
                   <th className="px-4 py-4">Stock</th>
-                  <th className="px-4 py-4">Seuil</th>
-                  <th className="px-4 py-4">Statut</th>
-                  <th className="px-4 py-4">Nuance</th>
+                  {premiumLayout ? <>
+                    <th className="px-4 py-4">Longueur(s) disponible(s)</th>
+                    <th className="px-4 py-4">Nuance</th>
+                    <th className="px-4 py-4">Seuil</th>
+                    <th className="px-4 py-4">Statut</th>
+                  </> : <>
+                    <th className="px-4 py-4">Seuil</th>
+                    <th className="px-4 py-4">Statut</th>
+                    <th className="px-4 py-4">Nuance</th>
+                  </>}
                   <th className="px-4 py-4">Actions</th>
                 </tr>
               </thead>
@@ -703,6 +771,7 @@ export default function Stock({ matiere }: StockProps) {
                       onUse={ouvrirUtilisation}
                       onDelete={supprimerDuStock}
                       onSaveThreshold={enregistrerSeuil}
+                      premiumLayout={premiumLayout}
                     />
                   );
                 })}

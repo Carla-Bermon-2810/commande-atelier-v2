@@ -2,8 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   Loader2,
   Plus,
   Ruler,
@@ -70,6 +72,10 @@ function normaliserDiametre(value: string) {
   return propre.startsWith("Ø") ? propre : `Ø${propre}`;
 }
 
+function messageErreur(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function estReste(tige: Tige) {
   return Boolean(tige.parent_id) || /-R\d+$/i.test(tige.numero);
 }
@@ -81,6 +87,7 @@ function TigeGroupRow({
   onUse,
   onDelete,
   onSaveThreshold,
+  onDetail,
 }: {
   groupe: {
     key: string;
@@ -90,6 +97,7 @@ function TigeGroupRow({
     morceauxFiltres: Tige[];
     nombreDisponibles: number;
     longueurDisponible: number;
+    longueursDisponibles: number[];
     seuil: number | null;
     statut: StockAlertDisplayStatus;
   };
@@ -98,10 +106,16 @@ function TigeGroupRow({
   onUse: (tige: Tige) => void;
   onDelete: (tige: Tige) => void;
   onSaveThreshold: (referenceKey: string, seuil: number | null) => Promise<boolean>;
+  onDetail: (tige: Tige) => void;
 }) {
+  const rowTone = groupe.statut === "rupture"
+    ? "bg-red-50/70 hover:bg-red-50"
+    : groupe.statut === "a_recommander"
+      ? "bg-orange-50/70 hover:bg-orange-50"
+      : "bg-white hover:bg-slate-50";
   return (
     <Fragment key={groupe.key}>
-      <tr className="border-b border-slate-100 bg-white transition hover:bg-slate-50">
+      <tr className={`border-b border-slate-100 transition ${rowTone}`}>
         <td className="w-10 px-4 py-4">
           <button
             type="button"
@@ -118,19 +132,19 @@ function TigeGroupRow({
         <td className="px-4 py-4 font-semibold text-[#2F3437]">
           {groupe.diametre}
         </td>
+        <td className="px-4 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{groupe.nombreDisponibles} morceau{groupe.nombreDisponibles > 1 ? "x" : ""}</span></td>
+        <td className="px-4 py-4 font-bold text-[#17232b]">{groupe.longueurDisponible.toLocaleString("fr-FR")} mm</td>
         <td className="px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700">
-              {groupe.nombreDisponibles} morceau(x)
-            </span>
-            <span className="font-bold text-[#2F3437]">
-              {groupe.longueurDisponible.toLocaleString("fr-FR")} mm
-            </span>
-          </div>
+          {groupe.longueursDisponibles.length > 0 ? (
+            <div className="flex min-w-[180px] flex-wrap gap-1.5">
+              {groupe.longueursDisponibles.map((longueur, index) => (
+                <span key={`${groupe.key}:${longueur}:${index}`} className="whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{longueur.toLocaleString("fr-FR")} mm</span>
+              ))}
+            </div>
+          ) : "—"}
         </td>
         <td className="px-4 py-4">
           <LengthThresholdCell
-            key={`${groupe.key}:${groupe.seuil ?? "non-defini"}`}
             seuil={groupe.seuil}
             onSave={(seuil) => onSaveThreshold(groupe.key, seuil)}
           />
@@ -139,15 +153,15 @@ function TigeGroupRow({
           <LengthStockStatusBadge statut={groupe.statut} />
         </td>
         <td className="px-4 py-4 text-right">
-          <span className="text-xs font-medium text-slate-400">
+          <button type="button" onClick={() => onDetail(groupe.morceaux.find((tige) => tige.statut === "disponible") ?? groupe.morceaux[0])} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-[#F95516]">
             {ouvert ? "Masquer" : "Détails"}
-          </span>
+          </button>
         </td>
       </tr>
 
       {ouvert && (
         <tr className="border-b border-slate-100 bg-slate-50/70">
-          <td colSpan={7} className="px-10 py-3">
+          <td colSpan={9} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
               {groupe.morceauxFiltres.map((tige, index) => {
                 const plein = tige.statut === "disponible" && !estReste(tige);
@@ -286,7 +300,8 @@ export default function StockTigesFiletees() {
   }
 
   useEffect(() => {
-    chargerStock();
+    const timer = window.setTimeout(() => { void chargerStock(); }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const diametresForm = diametres[form.matiere] ?? [];
@@ -310,11 +325,6 @@ export default function StockTigesFiletees() {
       return correspondRecherche && correspondMatiere && correspondDiametre;
     });
   }, [tiges, recherche, matiereFiltre, diametreFiltre]);
-
-  const tigesFiltrees = useMemo(
-    () => tigesCorrespondantes.filter((tige) => tige.statut === "disponible"),
-    [tigesCorrespondantes],
-  );
 
   const groupes = useMemo(() => {
     const map = new Map<string, Tige[]>();
@@ -353,6 +363,7 @@ export default function StockTigesFiletees() {
       morceauxFiltres: liste,
       nombreDisponibles: disponibles.length,
       longueurDisponible,
+      longueursDisponibles: disponibles.map((tige) => Number(tige.longueur_disponible || 0)),
       seuil: Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null,
       statut: calculateStockAlertStatus(
         longueurDisponible,
@@ -402,6 +413,7 @@ export default function StockTigesFiletees() {
         else next[referenceKey] = seuil;
         return next;
       });
+      notifyStockAlertsUpdated();
       setMessage(seuil === null ? "Seuil de longueur supprimé." : "Seuil de longueur enregistré.");
       setTimeout(() => setMessage(""), 2500);
       return true;
@@ -414,8 +426,27 @@ export default function StockTigesFiletees() {
   const nombreDisponibles = tiges.filter(
     (tige) => tige.statut === "disponible"
   ).length;
+
+  const indicateurs = useMemo(() => {
+    const references = new Map<string, Tige[]>();
+    for (const tige of tiges) {
+      const key = buildTigeReferenceKey(tige);
+      const items = references.get(key) ?? [];
+      items.push(tige);
+      references.set(key, items);
+    }
+    const statuts = Array.from(references, ([key, items]) => {
+      const longueurTotale = items.reduce((total, tige) => total + (tige.statut === "disponible" ? Number(tige.longueur_disponible || 0) : 0), 0);
+      const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
+      return calculateStockAlertStatus(longueurTotale, seuil);
+    });
+    return {
+      references: statuts.length,
+      alertes: statuts.filter((statut) => statut === "a_recommander" || statut === "rupture").length,
+      ruptures: statuts.filter((statut) => statut === "rupture").length,
+    };
+  }, [seuils, tiges]);
   
-  const nombreDisponiblesFiltres = tigesFiltrees.length;
   function basculerGroupe(key: string) {
     setGroupesOuverts((precedent) => {
       const prochain = new Set(precedent);
@@ -524,9 +555,9 @@ export default function StockTigesFiletees() {
         setModalOuverte(false);
         setMessage("");
       }, 800);
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErreur(error?.message || "Une erreur est survenue.");
+      setErreur(messageErreur(error, "Une erreur est survenue."));
     } finally {
       setEnregistrement(false);
     }
@@ -645,9 +676,9 @@ export default function StockTigesFiletees() {
 
       await chargerStock();
       fermerUtilisation();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setErreurUtilisation(error?.message || "Une erreur est survenue.");
+      setErreurUtilisation(messageErreur(error, "Une erreur est survenue."));
     } finally {
       setEnregistrementUtilisation(false);
     }
@@ -681,9 +712,9 @@ export default function StockTigesFiletees() {
 
       setTiges((precedentes) => precedentes.filter((item) => item.id !== tige.id));
       notifyStockAlertsUpdated();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur suppression tige :", error);
-      setErreur(error?.message || "Impossible de supprimer cette tige.");
+      setErreur(messageErreur(error, "Impossible de supprimer cette tige."));
     }
   }
 
@@ -700,42 +731,40 @@ export default function StockTigesFiletees() {
     return "Mouvement";
   }
 
-  const longueurRestanteAffichee = tigeUtilisation
-    ? Number(longueurRestanteSaisie || 0)
-    : 0;
-
   return (
-    <div className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Package size={34} className="text-[#F95516]" />
-            <h1 className="text-2xl font-bold text-[#2F3437] sm:text-3xl">Stock tiges filetées</h1>
+    <div className="mx-auto max-w-[1500px] px-3 pb-6 sm:px-6 sm:pb-8 lg:px-8 lg:pb-10">
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mb-8">
+        <div className="flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#172025] text-white shadow-[0_8px_20px_rgba(23,32,37,.15)] sm:h-20 sm:w-20"><Ruler size={30} aria-hidden="true" /></span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F95516]">Stock · Atelier</p>
+              <h1 className="mt-1 text-3xl font-black tracking-tight text-[#17232b] sm:text-4xl">Tiges filetées</h1>
+              <p className="mt-2 text-sm text-slate-500 sm:text-base">Consultez et mettez à jour les longueurs disponibles dans l’atelier.</p>
+            </div>
           </div>
-          <p className="mt-1 text-slate-500">Gestion des tiges filetées disponibles dans l'atelier</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
+            <div className="min-w-[132px] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center"><Package size={20} className="mx-auto text-slate-600" /><p className="mt-1 text-2xl font-black text-[#17232b]">{indicateurs.references}</p><p className="text-xs font-medium text-slate-500">références</p></div>
+            <div className="min-w-[132px] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center"><Ruler size={20} className="mx-auto text-slate-600" /><p className="mt-1 text-2xl font-black text-[#17232b]">{nombreDisponibles}</p><p className="text-xs font-medium text-slate-500">morceau{nombreDisponibles > 1 ? "x" : ""} en stock</p></div>
+            <div className={`min-w-[132px] rounded-xl border px-4 py-3 text-center ${indicateurs.ruptures > 0 ? "border-red-200 bg-red-50" : indicateurs.alertes > 0 ? "border-orange-200 bg-orange-50" : "border-slate-200 bg-slate-50"}`}>
+              {indicateurs.ruptures > 0 ? <AlertTriangle size={20} className="mx-auto text-red-600" /> : <CircleAlert size={20} className={`mx-auto ${indicateurs.alertes > 0 ? "text-[#F95516]" : "text-slate-500"}`} />}
+              <p className={`mt-1 text-2xl font-black ${indicateurs.ruptures > 0 ? "text-red-700" : indicateurs.alertes > 0 ? "text-[#c43f10]" : "text-[#17232b]"}`}>{indicateurs.alertes}</p>
+              <p className="text-xs font-medium text-slate-500">alerte{indicateurs.alertes > 1 ? "s" : ""}</p>
+            </div>
+            <button type="button" onClick={ouvrirReception} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-5 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(249,85,22,.20)] transition hover:-translate-y-0.5 hover:bg-[#e04d13] focus:outline-none focus:ring-2 focus:ring-[#F95516] focus:ring-offset-2"><Plus size={20} /> Réceptionner une tige</button>
+          </div>
         </div>
+      </section>
 
-        <button
-          type="button"
-          onClick={ouvrirReception}
-          className="flex items-center gap-2 rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-orange-600"
-        >
-          <Plus size={20} />
-          Réceptionner une tige
-        </button>
-      </div>
-
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between px-6 pt-6">
           <div>
             <h2 className="text-xl font-bold text-[#2F3437]">Tiges filetées en stock</h2>
-            <p className="mt-3 text-sm text-slate-500">
-              {nombreDisponibles} morceau{nombreDisponibles > 1 ? "x" : ""} disponible{nombreDisponibles > 1 ? "s" : ""}
-            </p>
+            <p className="mt-1 text-sm text-slate-500">Recherchez, filtrez et consultez les longueurs disponibles.</p>
           </div>
 
-          <div className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-semibold text-[#F95516]">
-          {nombreDisponiblesFiltres} / {nombreDisponibles} tige(s)
+          <div className={`rounded-xl px-4 py-2 text-sm font-semibold ${indicateurs.ruptures > 0 ? "bg-red-50 text-red-700" : indicateurs.alertes > 0 ? "bg-orange-50 text-[#F95516]" : "bg-slate-100 text-slate-600"}`}>
+            {indicateurs.references} référence{indicateurs.references > 1 ? "s" : ""} · {nombreDisponibles} morceau{nombreDisponibles > 1 ? "x" : ""} · {indicateurs.alertes} alerte{indicateurs.alertes > 1 ? "s" : ""}
           </div>
         </div>
 
@@ -790,13 +819,15 @@ export default function StockTigesFiletees() {
           <div className="p-12 text-center text-slate-500">Aucune tige ne correspond aux critères.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="min-w-[1120px] w-full text-left">
               <thead>
                 <tr className="border-b bg-slate-50 text-sm text-slate-500">
                   <th className="w-10 px-4 py-4"></th>
                   <th className="px-4 py-4 text-left">Matière</th>
                   <th className="px-4 py-4 text-left">Diamètre</th>
                   <th className="px-4 py-4 text-left">Stock</th>
+                  <th className="px-4 py-4 text-left">Longueur totale disponible</th>
+                  <th className="px-4 py-4 text-left">Longueurs disponibles</th>
                   <th className="px-4 py-4 text-left">Seuil</th>
                   <th className="px-4 py-4 text-left">Statut</th>
                   <th className="px-4 py-4 text-right">Actions</th>
@@ -812,6 +843,7 @@ export default function StockTigesFiletees() {
                     onUse={ouvrirUtilisation}
                     onDelete={supprimerTige}
                     onSaveThreshold={enregistrerSeuil}
+                    onDetail={ouvrirDetail}
                   />
                 ))}
               </tbody>
@@ -897,7 +929,7 @@ export default function StockTigesFiletees() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-[#2F3437]">Utiliser la tige</h2>
-                  <p className="mt-1 text-sm text-slate-500">Saisissez directement la longueur qu'il restera.</p>
+                  <p className="mt-1 text-sm text-slate-500">Saisissez directement la longueur qu’il restera.</p>
                 </div>
                 <button type="button" onClick={fermerUtilisation} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100">
                   <X size={22} />
@@ -951,7 +983,7 @@ export default function StockTigesFiletees() {
                   className="flex items-center gap-2 rounded-xl bg-[#F95516] px-5 py-3 font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
                 >
                   {enregistrementUtilisation ? <Loader2 size={18} className="animate-spin" /> : <Ruler size={18} />}
-                  Valider l'utilisation
+                  Valider l’utilisation
                 </button>
               </div>
             </div>
