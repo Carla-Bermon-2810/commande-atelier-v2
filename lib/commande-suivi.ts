@@ -11,6 +11,50 @@ export type LigneCommandeSuivi = {
   variante: string | null;
   photo: string | null;
   unite: string | null;
+  /** Snapshot technique immuable pour les lignes ajoutées depuis le Stock. */
+  stockReferenceSnapshot: StockReferenceSnapshot | null;
+};
+
+export type StockReferenceSource =
+  | "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts"
+  | "rivets" | "forets" | "fraises" | "tarauds";
+
+export type StockReferenceSnapshot = {
+  source: StockReferenceSource;
+  referenceId?: number;
+  referenceKey?: string;
+  uniteCommande: "piece" | "boite" | "barre";
+  uniteStock: "pieces" | "mm";
+  facteurConversion: number;
+  longueurParBarreMm?: number;
+  /** Caractéristiques techniques conservées pour créer les futurs morceaux physiques. */
+  configuration?: Record<string, string | number | null>;
+};
+
+export type OperationStockReception = {
+  id: string;
+  receptionId: string;
+  commandeArticleId: string;
+  article: string;
+  quantiteRecue: number;
+  statut: "en_attente_liaison" | "prete_a_confirmer" | "appliquee" | "ignoree" | "erreur";
+  raison?: string | null;
+  stockType: StockReferenceSource | null;
+  referenceStock: string | null;
+  uniteCommande: string | null;
+  uniteStock: "pieces" | "mm" | null;
+  quantiteAAjouter: number | null;
+  configuration: Record<string, string | number | null>;
+  stockAvant: Record<string, unknown> | null;
+  stockApres: Record<string, unknown> | null;
+  appliqueeLe: string | null;
+  previsualisation: {
+    disponible: boolean;
+    message?: string;
+    stockActuel: number | null;
+    stockApres: number | null;
+    unite: "pieces" | "mm" | null;
+  };
 };
 
 export type ReceptionCommandeSuivi = {
@@ -38,6 +82,7 @@ export type CommandeSuivi = {
   progression: number;
   lignes: LigneCommandeSuivi[];
   receptions: ReceptionCommandeSuivi[];
+  operationsStock: OperationStockReception[];
 };
 
 /**

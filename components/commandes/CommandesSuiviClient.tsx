@@ -14,6 +14,7 @@ import {
   ImageOff,
   Loader2,
   PackageCheck,
+  PackagePlus,
   Search,
   UserRound,
 } from "lucide-react";
@@ -22,6 +23,11 @@ import type { CommandeSuiviResume } from "@/lib/commande-receptions-server";
 
 type Feedback = { type: "error" | "success"; message: string } | null;
 type FiltreStatut = "Toutes" | StatutCommandeSuivi;
+export type CommandesSuiviPreview = {
+  commandes: CommandeSuivi[];
+  selectedId?: string;
+  longueursRecues?: Record<string, string[]>;
+};
 
 const STATUTS: FiltreStatut[] = ["Toutes", "En attente", "Partiellement livrée", "Livrée", "Annulée"];
 
@@ -55,7 +61,21 @@ function getArticlePhotoUrl(photo: string | null) {
   return url ? `${url}/storage/v1/object/public/photos/${photo}` : null;
 }
 
-export default function CommandesSuiviClient() {
+function resumeCommande(commande: CommandeSuivi): CommandeSuiviResume {
+  return {
+    id: commande.id,
+    numero: commande.numero,
+    demandeur: commande.demandeur,
+    dateCommande: commande.dateCommande,
+    statut: commande.statut,
+    nombreReferences: commande.lignes.length,
+    quantiteCommandee: commande.quantiteCommandee,
+    quantiteRecue: commande.quantiteRecue,
+    progression: commande.progression,
+  };
+}
+
+export default function CommandesSuiviClient({ preview }: { preview?: CommandesSuiviPreview }) {
   const [commandes, setCommandes] = useState<CommandeSuiviResume[]>([]);
   const [commande, setCommande] = useState<CommandeSuivi | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -72,9 +92,18 @@ export default function CommandesSuiviClient() {
   const [commentaireReception, setCommentaireReception] = useState("");
   const [enregistrePar, setEnregistrePar] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [operationEnCours, setOperationEnCours] = useState<string | null>(null);
+  const [longueursRecues, setLongueursRecues] = useState<Record<string, string[]>>(preview?.longueursRecues ?? {});
 
   async function chargerListe() {
     setLoadingList(true);
+    if (preview) {
+      const liste = preview.commandes.map(resumeCommande);
+      setCommandes(liste);
+      setSelectedId((current) => current ?? preview.selectedId ?? [...liste].sort((a, b) => statusRank(a.statut) - statusRank(b.statut))[0]?.id ?? null);
+      setLoadingList(false);
+      return;
+    }
     try {
       const response = await fetch("/api/commandes", { cache: "no-store" });
       const result: { commandes?: CommandeSuiviResume[]; message?: string } = await response.json();
@@ -92,6 +121,17 @@ export default function CommandesSuiviClient() {
   async function chargerDetail(id: string) {
     setLoadingDetail(true);
     setFeedback(null);
+    if (preview) {
+      const detail = preview.commandes.find((item) => item.id === id) ?? null;
+      setCommande(detail);
+      setQuantites(Object.fromEntries((detail?.lignes ?? []).map((ligne) => [ligne.id, 0])));
+      setCommentaireReception("");
+      setEnregistrePar("");
+      setLongueursRecues(preview.longueursRecues ?? {});
+      setTab("articles");
+      setLoadingDetail(false);
+      return;
+    }
     try {
       const response = await fetch(`/api/commandes/${id}/receptions`, { cache: "no-store" });
       const result: { commande?: CommandeSuivi; message?: string } = await response.json();
@@ -152,6 +192,10 @@ export default function CommandesSuiviClient() {
 
   async function enregistrerReception() {
     if (!commande || saving) return;
+    if (preview) {
+      setFeedback({ type: "success", message: "Prévisualisation locale : aucune réception n’est enregistrée." });
+      return;
+    }
     const lignes = commande.lignes
       .map((ligne) => ({ commandeArticleId: ligne.id, quantiteRecue: quantites[ligne.id] ?? 0 }))
       .filter((ligne) => ligne.quantiteRecue > 0);
@@ -187,6 +231,69 @@ export default function CommandesSuiviClient() {
       setFeedback({ type: "error", message: error instanceof Error && error.message ? error.message : "La réception n’a pas pu être enregistrée." });
     } finally {
       setSaving(false);
+    }
+  }
+
+  function longueursPour(operationId: string, nombre: number) {
+    const existantes = longueursRecues[operationId] ?? [];
+    return Array.from({ length: nombre }, (_, index) => existantes[index] ?? "");
+  }
+
+  function modifierLongueur(operationId: string, index: number, value: string, nombre: number) {
+    setLongueursRecues((current) => {
+      const next = longueursPour(operationId, nombre);
+      next[index] = value;
+      return { ...current, [operationId]: next };
+    });
+  }
+
+  async function confirmerEntreeStock(operation: NonNullable<CommandeSuivi>["operationsStock"][number]) {
+    if (!commande || operationEnCours || !operation.previsualisation.disponible) return;
+    const longueurs = operation.uniteStock === "mm"
+      ? longueursPour(operation.id, operation.quantiteRecue).map(Number)
+      : [];
+    if (operation.uniteStock === "mm" && (longueurs.some((value) => !Number.isFinite(value) || value <= 0) || longueurs.length !== operation.quantiteRecue)) {
+      setFeedback({ type: "error", message: "Renseignez une longueur positive pour chaque morceau reçu." });
+      return;
+    }
+
+    if (preview) {
+      const stockApres = operation.uniteStock === "mm"
+        ? { longueur_totale_mm: (operation.previsualisation.stockActuel ?? 0) + longueurs.reduce((total, value) => total + value, 0) }
+        : { pieces: operation.previsualisation.stockApres ?? operation.stockApres?.pieces ?? 0 };
+      setCommande((current) => current ? {
+        ...current,
+        operationsStock: current.operationsStock.map((item) => item.id === operation.id ? {
+          ...item,
+          statut: "appliquee",
+          appliqueeLe: new Date().toISOString(),
+          stockAvant: operation.uniteStock === "mm" ? { longueur_totale_mm: operation.previsualisation.stockActuel ?? 0 } : { pieces: operation.previsualisation.stockActuel ?? 0 },
+          stockApres,
+          previsualisation: { ...item.previsualisation, stockApres: operation.uniteStock === "mm" ? Number(stockApres.longueur_totale_mm) : Number(stockApres.pieces) },
+        } : item),
+      } : current);
+      setFeedback({ type: "success", message: "Prévisualisation locale : entrée affichée comme confirmée, sans écriture Stock." });
+      return;
+    }
+
+    setOperationEnCours(operation.id);
+    setFeedback(null);
+    try {
+      const response = await fetch(`/api/commandes/${commande.id}/receptions/stock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operationId: operation.id, longueursMm: longueurs, appliqueePar: enregistrePar, idempotencyKey: crypto.randomUUID() }),
+      });
+      const result: { commande?: CommandeSuivi; message?: string; result?: { status?: string } } = await response.json();
+      if (!response.ok || !result.commande) throw new Error(result.message);
+      setCommande(result.commande);
+      window.dispatchEvent(new Event("stock-alerts-updated"));
+      setFeedback({ type: "success", message: result.result?.status === "already_applied" ? "Cette entrée Stock avait déjà été confirmée." : "Entrée en Stock confirmée et historisée." });
+      await chargerListe();
+    } catch (error) {
+      setFeedback({ type: "error", message: error instanceof Error && error.message ? error.message : "L’entrée en Stock n’a pas pu être confirmée." });
+    } finally {
+      setOperationEnCours(null);
     }
   }
 
@@ -268,6 +375,21 @@ export default function CommandesSuiviClient() {
               const photo = getArticlePhotoUrl(ligne.photo);
               return <tr key={ligne.id} className={`border-b border-slate-100 transition-colors ${terminee ? "bg-emerald-50/70" : partiellementRecue ? "bg-orange-50/70" : "bg-white"}`}><td className="px-4 py-4"><input type="checkbox" checked={terminee || (ligne.quantiteRestante > 0 && maintenant === ligne.quantiteRestante)} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, event.target.checked ? ligne.quantiteRestante : 0, ligne.quantiteRestante)} className="h-5 w-5 rounded border-slate-300 text-[#F95516] focus:ring-[#F95516] disabled:opacity-70" aria-label={`Réceptionner entièrement ${ligne.article}`} /></td><td className="px-3 py-4"><div className="flex items-center gap-3"><div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white"><ImageOff size={18} className="absolute text-slate-300" />{photo && <img src={photo} alt="" className="relative h-full w-full object-contain bg-white p-1" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />}</div><div><p className={`font-bold ${terminee ? "text-emerald-900" : "text-slate-900"}`}>{ligne.article}</p>{ligne.variante && <p className="mt-1 text-xs text-slate-500">{ligne.variante}</p>}{ligne.famille && <p className="mt-1 text-xs text-slate-500">{ligne.famille}</p>}</div></div></td><td className="px-3 py-4 text-center font-bold text-slate-800">{ligne.quantiteCommandee}</td><td className="px-3 py-4 text-center font-bold text-slate-700">{ligne.quantiteRecue}</td><td className="px-3 py-4 text-center"><input type="number" min={0} max={ligne.quantiteRestante} value={maintenant} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, Number(event.target.value), ligne.quantiteRestante)} className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-2 text-center font-bold outline-none focus:border-[#F95516] disabled:cursor-not-allowed disabled:border-emerald-100 disabled:bg-emerald-100/60" aria-label={`Quantité reçue maintenant pour ${ligne.article}`} /></td><td className="px-3 py-4 text-center font-black text-slate-800">{resteApres}</td><td className="px-3 py-4">{terminee ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"><CheckCircle2 size={14} /> Réceptionnée</span> : maintenant > 0 ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">À enregistrer</span> : partiellementRecue ? <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800">Partiellement reçue</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">En attente</span>}</td></tr>;
             })}</tbody></table></div>}
+
+            {tab === "articles" && commande.operationsStock.length > 0 && <section className="border-t border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6" aria-label="Suivi des entrées en Stock">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="flex items-center gap-2 font-black text-slate-900"><PackagePlus size={19} className="text-[#F95516]" /> Suivi des entrées en Stock</h4><p className="mt-1 text-xs leading-5 text-slate-500">Une réception reste séparée du Stock tant que vous ne la confirmez pas ici.</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{commande.operationsStock.filter((item) => item.statut === "prete_a_confirmer").length} à confirmer</span></div>
+              <div className="mt-4 space-y-3">{commande.operationsStock.map((operation) => {
+                const isLength = operation.uniteStock === "mm";
+                const lengths = isLength ? longueursPour(operation.id, operation.quantiteRecue) : [];
+                const totalLengths = lengths.reduce((total, value) => total + (Number(value) > 0 ? Number(value) : 0), 0);
+                const canApply = operation.statut === "prete_a_confirmer" && operation.previsualisation.disponible && (!isLength || lengths.length === operation.quantiteRecue && lengths.every((value) => Number(value) > 0));
+                const previewAfter = isLength && operation.previsualisation.stockActuel !== null ? operation.previsualisation.stockActuel + totalLengths : operation.previsualisation.stockApres;
+                return <article key={operation.id} className={`rounded-2xl border p-4 ${operation.statut === "appliquee" ? "border-emerald-200 bg-emerald-50/60" : operation.statut === "prete_a_confirmer" ? "border-orange-200 bg-white" : "border-slate-200 bg-white"}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold text-slate-900">{operation.article}</p><p className="mt-1 text-xs text-slate-500">Référence Stock : {operation.referenceStock ?? "Non liée"}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${operation.statut === "appliquee" ? "bg-emerald-100 text-emerald-800" : operation.statut === "prete_a_confirmer" ? "bg-orange-100 text-[#c2410c]" : "bg-slate-100 text-slate-600"}`}>{operation.statut === "appliquee" ? "Ajoutée au Stock" : operation.statut === "prete_a_confirmer" ? "À confirmer" : "Aucune entrée proposée"}</span></div>
+                  {operation.statut === "prete_a_confirmer" && operation.previsualisation.disponible ? <><div className="mt-3 grid gap-2 text-sm sm:grid-cols-4"><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Reçu</p><p className="mt-1 font-bold text-slate-900">{operation.quantiteRecue} {operation.uniteCommande === "boite" ? "boîte(s)" : operation.uniteCommande === "barre" ? "morceau(x)" : "pièce(s)"}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Ajout proposé</p><p className="mt-1 font-bold text-slate-900">{isLength ? (totalLengths ? `${totalLengths.toLocaleString("fr-FR")} mm` : "Longueurs à saisir") : `${(operation.quantiteAAjouter ?? 0).toLocaleString("fr-FR")} pièces`}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Stock actuel</p><p className="mt-1 font-bold text-slate-900">{operation.previsualisation.stockActuel?.toLocaleString("fr-FR")} {operation.previsualisation.unite}</p></div><div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Après confirmation</p><p className="mt-1 font-bold text-emerald-900">{previewAfter === null ? "À calculer" : `${previewAfter.toLocaleString("fr-FR")} ${operation.previsualisation.unite}`}</p></div></div>
+                  {isLength && <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50/50 p-3"><p className="text-sm font-bold text-slate-800">Longueur réellement reçue par morceau</p><div className="mt-2 grid gap-2 sm:grid-cols-2">{lengths.map((value, index) => <label key={index} className="text-xs font-medium text-slate-600">Morceau {index + 1}<input value={value} onChange={(event) => modifierLongueur(operation.id, index, event.target.value, operation.quantiteRecue)} type="number" min="1" step="1" placeholder="mm" className="mt-1 block min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-[#F95516]" /></label>)}</div></div>}
+                  <button type="button" disabled={!canApply || operationEnCours !== null} onClick={() => confirmerEntreeStock(operation)} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-sm font-bold text-white transition hover:bg-[#e84a0e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Check size={17} />{operationEnCours === operation.id ? "Confirmation…" : "Confirmer l’entrée en Stock"}</button></> : <p className="mt-3 text-sm text-slate-600">{operation.statut === "appliquee" ? <>Ajoutée au Stock : <strong>{(operation.quantiteAAjouter ?? 0).toLocaleString("fr-FR")} {operation.uniteStock}</strong>{operation.appliqueeLe ? <> · le {formatDate(operation.appliqueeLe)}</> : null}. Cette réception reste tracée et ne peut pas être ajoutée une seconde fois.</> : operation.raison || operation.previsualisation.message || "Cette ligne reste réceptionnée sans modifier le Stock."}</p>}</article>;
+              })}</div>
+            </section>}
 
             {tab === "informations" && <div className="p-6"><h4 className="font-bold text-slate-900">Commentaire de la commande</h4><p className="mt-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{commande.commentaire || "Aucun commentaire ajouté à cette commande."}</p></div>}
             {tab === "historique" && <div className="p-5 sm:p-6">{commande.receptions.length === 0 ? <div className="rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">Aucune réception n’a encore été enregistrée.</div> : <ol className="space-y-3">{commande.receptions.map((reception) => <li key={reception.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-slate-900">Réception du {formatDateLong(reception.dateReception)}</p>{reception.enregistrePar && <p className="text-sm text-slate-500">Saisie par {reception.enregistrePar}</p>}</div><ul className="mt-3 space-y-1 text-sm text-slate-600">{reception.lignes.map((ligne) => { const article = commande.lignes.find((item) => item.id === ligne.commandeArticleId); return <li key={ligne.id}>+ {ligne.quantiteRecue} — {article?.article ?? "Article"}</li>; })}</ul>{reception.commentaire && <p className="mt-3 border-t border-slate-100 pt-3 text-sm italic text-slate-600">{reception.commentaire}</p>}</li>)}</ol>}</div>}

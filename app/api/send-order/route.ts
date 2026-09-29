@@ -18,6 +18,7 @@ type OrderArticle = {
     uniteStock: "pieces" | "mm";
     facteurConversion: number;
     longueurParBarreMm?: number;
+    configuration?: Record<string, string | number | null>;
   };
   quantite: number;
 };
@@ -75,6 +76,9 @@ function parseOrder(payload: unknown): OrderPayload | null {
     const uniteStock = stockReference?.uniteStock;
     const facteurConversion = Number(stockReference?.facteurConversion);
     const longueurParBarreMm = Number(stockReference?.longueurParBarreMm);
+    const configuration = (stockReference?.configuration && typeof stockReference.configuration === "object" && !Array.isArray(stockReference.configuration)
+      ? Object.fromEntries(Object.entries(stockReference.configuration as Record<string, unknown>).filter(([, value]) => value === null || typeof value === "string" || (typeof value === "number" && Number.isFinite(value))).slice(0, 12))
+      : undefined) as Record<string, string | number | null> | undefined;
 
     if (
       !nom ||
@@ -99,6 +103,7 @@ function parseOrder(payload: unknown): OrderPayload | null {
         uniteStock: uniteStock as "pieces" | "mm",
         facteurConversion,
         longueurParBarreMm: Number.isFinite(longueurParBarreMm) ? longueurParBarreMm : undefined,
+        configuration,
       } : undefined,
       quantite,
     };

@@ -1,39 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminData } from "@/lib/admin-api";
 
-import ArticleForm from "@/components/admin/ArticleForm";
+import ArticleForm, { type ArticleFormData } from "@/components/admin/ArticleForm";
+
+type Category = { id: number; nom: string };
+type Family = { id: number; categorie?: string | null; famille: string };
+type CreatedArticle = { id: number };
 
 export default function NouveauArticlePage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [familles, setFamilles] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [familles, setFamilles] = useState<Family[]>([]);
 
-  useEffect(() => {
-    chargerDonnees();
-  }, []);
-
-  async function chargerDonnees() {
+  const chargerDonnees = useCallback(async () => {
     setLoading(true);
 
-    const [categoriesRes, famillesRes] = await Promise.all([
-      adminData<any[]>("categories", "select", { order: "ordre" }),
-      adminData<any[]>("famille", "select", { order: "famille" }),
-    ]);
-    setCategories(categoriesRes || []);
-    setFamilles(famillesRes || []);
-
-    setLoading(false);
-  }
-
-  async function creerArticle(data: any) {
     try {
-      const articles = await adminData<any[]>("catalogue", "insert", { values: data });
+      const [categoriesRes, famillesRes] = await Promise.all([
+        adminData<Category[]>("categories", "select", { order: "ordre" }),
+        adminData<Family[]>("famille", "select", { order: "famille" }),
+      ]);
+      setCategories(categoriesRes || []);
+      setFamilles(famillesRes || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const task = window.setTimeout(() => { void chargerDonnees(); }, 0);
+    return () => window.clearTimeout(task);
+  }, [chargerDonnees]);
+
+  async function creerArticle(data: ArticleFormData) {
+    try {
+      const articles = await adminData<CreatedArticle[]>("catalogue", "insert", { values: data });
       const nouvelArticle = articles?.[0];
       if (!nouvelArticle) throw new Error("Article non créé.");
       router.push(`/admin/articles/${nouvelArticle.id}`);

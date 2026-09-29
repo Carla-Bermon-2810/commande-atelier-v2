@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Les tubes et tiges doivent conserver leur unité de commande dédiée." }, { status: 400 });
     }
 
-    const { error } = await supabase.from("catalogue_stock_liaisons").upsert({
+    const { data: savedLink, error } = await supabase.from("catalogue_stock_liaisons").upsert({
       catalogue_id: body.catalogueId,
       stock_type: body.stockType,
       stock_reference_id: target.referenceId,
@@ -107,10 +107,12 @@ export async function POST(request: NextRequest) {
         caracteristiques: target.caracteristiques,
       },
       updated_at: new Date().toISOString(),
-    }, { onConflict: "catalogue_id" });
+    }, { onConflict: "catalogue_id" })
+      .select("id,catalogue_id,stock_type,stock_reference_id,stock_reference_key,unite_commande,unite_stock,facteur_conversion,libelle_cible,actif,configuration")
+      .single();
     if (error) throw error;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, link: savedLink });
   } catch (error) {
     console.error("Erreur mise à jour liaison catalogue / stock:", error);
     return NextResponse.json({ message: "Impossible d’enregistrer cette liaison." }, { status: 500 });

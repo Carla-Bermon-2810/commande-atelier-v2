@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { enregistrerReception, getCommandeSuivi } from "@/lib/commande-receptions-server";
+import { preparerOperationsStockReception } from "@/lib/reception-stock-server";
 
 export const runtime = "nodejs";
 
@@ -94,6 +95,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const receptionId = await enregistrerReception(reception);
+    // Prépare seulement les propositions : aucune quantité Stock n'est modifiée ici.
+    await preparerOperationsStockReception(receptionId);
     const commande = await getCommandeSuivi(id);
 
     return Response.json({ success: true, receptionId, commande }, { status: 201 });

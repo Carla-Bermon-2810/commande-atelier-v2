@@ -8,6 +8,7 @@ import {
   type LigneCommandeSuivi,
   type ReceptionCommandeSuivi,
 } from "@/lib/commande-suivi";
+import { getOperationsStockCommande } from "@/lib/reception-stock-server";
 
 export type CommandeSuiviResume = {
   id: string;
@@ -40,6 +41,7 @@ type LigneCommandeRow = {
   variante_snapshot: string | null;
   photo_snapshot: string | null;
   unite_snapshot: string | null;
+  stock_reference_snapshot: unknown;
 };
 
 type ReceptionRow = {
@@ -77,7 +79,7 @@ export async function getCommandeSuivi(commandeId: string): Promise<CommandeSuiv
 
   const { data: lignes, error: lignesError } = await supabase
     .from("commande_articles")
-    .select("id, article, famille, quantite, catalogue_id, designation_snapshot, variante_snapshot, photo_snapshot, unite_snapshot")
+    .select("id, article, famille, quantite, catalogue_id, designation_snapshot, variante_snapshot, photo_snapshot, unite_snapshot, stock_reference_snapshot")
     .eq("commande_id", commandeId)
     .returns<LigneCommandeRow[]>();
 
@@ -127,6 +129,7 @@ export async function getCommandeSuivi(commandeId: string): Promise<CommandeSuiv
       variante: ligne.variante_snapshot,
       photo: ligne.photo_snapshot,
       unite: ligne.unite_snapshot,
+      stockReferenceSnapshot: ligne.stock_reference_snapshot as LigneCommandeSuivi["stockReferenceSnapshot"],
     };
   });
 
@@ -150,6 +153,7 @@ export async function getCommandeSuivi(commandeId: string): Promise<CommandeSuiv
   }));
 
   const progression = calculerProgressionReception(lignesSuivi);
+  const operationsStock = await getOperationsStockCommande(commandeId);
 
   return {
     id: commande.id,
@@ -162,6 +166,7 @@ export async function getCommandeSuivi(commandeId: string): Promise<CommandeSuiv
     ...progression,
     lignes: lignesSuivi,
     receptions: receptionsSuivi,
+    operationsStock,
   };
 }
 

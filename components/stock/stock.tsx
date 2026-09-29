@@ -176,7 +176,7 @@ function FragmentRow({
           <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
         </>}
         <td className="px-4 py-4">
-          <StockOrderButton compact target={{ source: "tubes", referenceKey: groupe.key, article: `${nomType(exemple.type)} ${exemple.section}`, famille: `Tubes ${nomMatiere(exemple.matiere)}`, stockActuel: groupe.longueurTotale, seuil: groupe.seuil, uniteStock: "mm" }} />
+          <StockOrderButton compact target={{ source: "tubes", referenceKey: groupe.key, article: `${nomType(exemple.type)} ${exemple.section}`, famille: `Tubes ${nomMatiere(exemple.matiere)}`, stockActuel: groupe.longueurTotale, seuil: groupe.seuil, uniteStock: "mm", configuration: { matiere: exemple.matiere, type: exemple.type, section: exemple.section, epaisseur: exemple.epaisseur ?? null, nuance: exemple.nuance ?? null } }} />
           <span className="text-xs font-medium text-slate-400">{ouvert ? "Masquer" : "Détails"}</span>
         </td>
       </tr>

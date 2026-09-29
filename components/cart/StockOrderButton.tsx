@@ -16,6 +16,7 @@ export type StockOrderTarget = {
   seuil: number | null;
   uniteStock: "pieces" | "mm";
   piecesParBoite?: number | null;
+  configuration?: Record<string, string | number | null>;
 };
 
 function format(value: number) {
@@ -70,6 +71,7 @@ export function StockOrderButton({ target, compact = false }: { target: StockOrd
         uniteStock: target.uniteStock,
         facteurConversion: target.uniteStock === "mm" ? lengthPerBar : (packSize ?? 1),
         longueurParBarreMm: target.uniteStock === "mm" ? lengthPerBar : undefined,
+        configuration: target.configuration,
       },
     });
     setOpen(false);

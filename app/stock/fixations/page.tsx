@@ -56,8 +56,7 @@ export default function FixationsPage() {
           <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3 sm:px-7"><p className="flex items-center gap-2 text-xs font-semibold text-slate-500"><Wrench size={15} className="text-[#F95516]" /> Les alertes sont calculées automatiquement selon le stock réel et les seuils minimum configurés.</p></div>
         </section>
 
-        <section aria-label="Indicateurs des fixations" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <KpiCard label="Familles" value={familles.length} detail="Vis, écrous, inserts et rivets" icon={Wrench} />
+        <section aria-label="Indicateurs des fixations" className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:gap-4">
           <KpiCard label="Références suivies" value={fixations?.nombreReferences ?? 0} detail={isLoading ? "Chargement…" : "Références de fixations"} icon={Package} />
           <KpiCard label="À traiter" value={fixations?.nombreAlertes ?? 0} detail="Sous le seuil ou en rupture" tone={(fixations?.nombreAlertes ?? 0) > 0 ? "orange" : "slate"} icon={CircleAlert} />
           <KpiCard label="Ruptures" value={ruptures} detail="À traiter en priorité" tone={ruptures > 0 ? "red" : "slate"} icon={TriangleAlert} />

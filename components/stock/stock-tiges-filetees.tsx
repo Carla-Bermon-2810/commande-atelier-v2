@@ -148,7 +148,7 @@ function TigeGroupRow({
           <LengthStockStatusBadge statut={groupe.statut} />
         </td>
         <td className="px-4 py-4 text-right">
-          <StockOrderButton compact target={{ source: "tiges_filetees", referenceKey: groupe.key, article: `Tige filetée ${groupe.diametre}`, famille: `Tiges filetées ${groupe.matiere}`, stockActuel: groupe.longueurDisponible, seuil: groupe.seuil, uniteStock: "mm" }} />
+          <StockOrderButton compact target={{ source: "tiges_filetees", referenceKey: groupe.key, article: `Tige filetée ${groupe.diametre}`, famille: `Tiges filetées ${groupe.matiere}`, stockActuel: groupe.longueurDisponible, seuil: groupe.seuil, uniteStock: "mm", configuration: { matiere: groupe.matiere, diametre: groupe.diametre } }} />
           <button type="button" onClick={() => onDetail(groupe.morceaux.find((tige) => tige.statut === "disponible") ?? groupe.morceaux[0])} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-[#F95516]">
             {ouvert ? "Masquer" : "Détails"}
           </button>

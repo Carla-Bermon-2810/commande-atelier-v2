@@ -3,12 +3,26 @@
 import { useState } from "react";
 import PhotoUploader from "./PhotoUploader";
 
-type Props = {
-  article: any;
-  categories: any[];
-  familles: any[];
+type ArticleData = {
+  id?: number;
+  produit?: string;
+  categorie?: string;
+  famille?: string;
+  grain?: string;
+  dimension?: string;
+  photo?: string;
+};
 
-  onSave: (data: any) => void;
+type Category = { id: number; nom: string };
+type Family = { id: number; categorie?: string | null; famille: string };
+export type ArticleFormData = Required<Omit<ArticleData, "id">>;
+
+type Props = {
+  article: ArticleData | null;
+  categories: Category[];
+  familles: Family[];
+
+  onSave: (data: ArticleFormData) => void | Promise<void>;
   onDelete?: () => void;
 };
 
@@ -50,10 +64,10 @@ export default function ArticleForm({
   <div className="flex aspect-square w-full flex-col items-center justify-center rounded-xl border bg-slate-50 text-center text-slate-500">
     <div className="mb-3 text-5xl">📷</div>
     <p className="font-semibold">
-      La photo pourra être ajoutée après la création de l'article.
+      La photo pourra être ajoutée après la création de l&apos;article.
     </p>
     <p className="mt-2 text-sm">
-      Commencez par enregistrer l'article.
+      Commencez par enregistrer l&apos;article.
     </p>
   </div>
 )}

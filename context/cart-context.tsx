@@ -25,6 +25,7 @@ export interface CartItem {
     uniteStock: "pieces" | "mm";
     facteurConversion: number;
     longueurParBarreMm?: number;
+    configuration?: Record<string, string | number | null>;
   };
   quantite: number;
 }
@@ -90,7 +91,8 @@ function isCartItem(value: unknown): value is CartItem {
       typeof stockReference.facteurConversion === "number" && Number.isFinite(stockReference.facteurConversion) && stockReference.facteurConversion > 0 &&
       (stockReference.referenceId === undefined || (typeof stockReference.referenceId === "number" && Number.isSafeInteger(stockReference.referenceId) && stockReference.referenceId > 0)) &&
       (stockReference.referenceKey === undefined || typeof stockReference.referenceKey === "string") &&
-      (stockReference.longueurParBarreMm === undefined || (typeof stockReference.longueurParBarreMm === "number" && Number.isFinite(stockReference.longueurParBarreMm) && stockReference.longueurParBarreMm > 0))
+      (stockReference.longueurParBarreMm === undefined || (typeof stockReference.longueurParBarreMm === "number" && Number.isFinite(stockReference.longueurParBarreMm) && stockReference.longueurParBarreMm > 0)) &&
+      (stockReference.configuration === undefined || (typeof stockReference.configuration === "object" && stockReference.configuration !== null && !Array.isArray(stockReference.configuration) && Object.values(stockReference.configuration as Record<string, unknown>).every((value) => value === null || typeof value === "string" || (typeof value === "number" && Number.isFinite(value)))))
     ))
   );
 }
