@@ -22,6 +22,8 @@ export type StockAlertReference = {
   stockActuel: number;
   seuil: number | null;
   unite: StockAlertUnit;
+  /** Conditionnement fiable lorsqu'il est connu pour une référence en pièces. */
+  piecesParBoite?: number;
   statut: StockAlertDisplayStatus;
 };
 
@@ -236,6 +238,7 @@ function buildBoxAlerts(args: {
       stockActuel,
       seuil,
       unite: "pieces",
+      piecesParBoite: numberOrZero(row.pieces_par_boite) || undefined,
       statut: calculateStockAlertStatus(stockActuel, seuil),
     } satisfies StockAlertReference;
   });

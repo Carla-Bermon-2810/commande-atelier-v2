@@ -15,6 +15,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 
 type Insert = {
   id: number;
@@ -815,6 +816,8 @@ export default function StockInserts() {
 
                   {/* ACTIONS */}
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+
+                    <StockOrderButton compact target={{ source: "inserts", referenceId: item.id, referenceKey: item.reference, article: `Insert ${item.reference} ${item.dimension}`.trim(), famille: "Inserts", stockActuel: item.quantite, seuil: item.seuilMinimum || null, uniteStock: "pieces" }} />
 
                     {/* SORTIE */}
                     <button

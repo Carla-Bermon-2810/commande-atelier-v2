@@ -24,6 +24,7 @@ import {
   type StockAlertDisplayStatus,
 } from "@/lib/stock-alerts";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 
 type Tige = {
   id: number;
@@ -76,6 +77,10 @@ function messageErreur(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function aUneLongueurUtilisable(tige: Tige) {
+  return tige.statut === "disponible" && Number(tige.longueur_disponible) > 0;
+}
+
 function estReste(tige: Tige) {
   return Boolean(tige.parent_id) || /-R\d+$/i.test(tige.numero);
 }
@@ -97,7 +102,6 @@ function TigeGroupRow({
     morceauxFiltres: Tige[];
     nombreDisponibles: number;
     longueurDisponible: number;
-    longueursDisponibles: number[];
     seuil: number | null;
     statut: StockAlertDisplayStatus;
   };
@@ -135,15 +139,6 @@ function TigeGroupRow({
         <td className="px-4 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{groupe.nombreDisponibles} morceau{groupe.nombreDisponibles > 1 ? "x" : ""}</span></td>
         <td className="px-4 py-4 font-bold text-[#17232b]">{groupe.longueurDisponible.toLocaleString("fr-FR")} mm</td>
         <td className="px-4 py-4">
-          {groupe.longueursDisponibles.length > 0 ? (
-            <div className="flex min-w-[180px] flex-wrap gap-1.5">
-              {groupe.longueursDisponibles.map((longueur, index) => (
-                <span key={`${groupe.key}:${longueur}:${index}`} className="whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{longueur.toLocaleString("fr-FR")} mm</span>
-              ))}
-            </div>
-          ) : "—"}
-        </td>
-        <td className="px-4 py-4">
           <LengthThresholdCell
             seuil={groupe.seuil}
             onSave={(seuil) => onSaveThreshold(groupe.key, seuil)}
@@ -153,6 +148,7 @@ function TigeGroupRow({
           <LengthStockStatusBadge statut={groupe.statut} />
         </td>
         <td className="px-4 py-4 text-right">
+          <StockOrderButton compact target={{ source: "tiges_filetees", referenceKey: groupe.key, article: `Tige filetée ${groupe.diametre}`, famille: `Tiges filetées ${groupe.matiere}`, stockActuel: groupe.longueurDisponible, seuil: groupe.seuil, uniteStock: "mm" }} />
           <button type="button" onClick={() => onDetail(groupe.morceaux.find((tige) => tige.statut === "disponible") ?? groupe.morceaux[0])} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-[#F95516]">
             {ouvert ? "Masquer" : "Détails"}
           </button>
@@ -161,15 +157,15 @@ function TigeGroupRow({
 
       {ouvert && (
         <tr className="border-b border-slate-100 bg-slate-50/70">
-          <td colSpan={9} className="px-10 py-3">
+          <td colSpan={8} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
-              {groupe.morceauxFiltres.map((tige, index) => {
+              {groupe.morceauxFiltres.filter(aUneLongueurUtilisable).map((tige, index, morceauxUtilisables) => {
                 const plein = tige.statut === "disponible" && !estReste(tige);
                 return (
                   <div
                     key={tige.id}
                     className={`flex items-center justify-between gap-4 px-4 py-3 ${
-                      index !== groupe.morceauxFiltres.length - 1
+                      index !== morceauxUtilisables.length - 1
                         ? "border-b border-slate-100"
                         : ""
                     }`}
@@ -345,9 +341,7 @@ export default function StockTigesFiletees() {
         buildTigeReferenceKey(tige) === key
     );
 
-    const disponibles = tousLesMorceaux.filter(
-      (tige) => tige.statut === "disponible"
-    );
+    const disponibles = tousLesMorceaux.filter(aUneLongueurUtilisable);
 
     const longueurDisponible = disponibles.reduce(
       (total, tige) =>
@@ -363,7 +357,6 @@ export default function StockTigesFiletees() {
       morceauxFiltres: liste,
       nombreDisponibles: disponibles.length,
       longueurDisponible,
-      longueursDisponibles: disponibles.map((tige) => Number(tige.longueur_disponible || 0)),
       seuil: Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null,
       statut: calculateStockAlertStatus(
         longueurDisponible,
@@ -423,9 +416,7 @@ export default function StockTigesFiletees() {
     }
   }
 
-  const nombreDisponibles = tiges.filter(
-    (tige) => tige.statut === "disponible"
-  ).length;
+  const nombreDisponibles = tiges.filter(aUneLongueurUtilisable).length;
 
   const indicateurs = useMemo(() => {
     const references = new Map<string, Tige[]>();
@@ -436,7 +427,7 @@ export default function StockTigesFiletees() {
       references.set(key, items);
     }
     const statuts = Array.from(references, ([key, items]) => {
-      const longueurTotale = items.reduce((total, tige) => total + (tige.statut === "disponible" ? Number(tige.longueur_disponible || 0) : 0), 0);
+      const longueurTotale = items.filter(aUneLongueurUtilisable).reduce((total, tige) => total + Number(tige.longueur_disponible), 0);
       const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
       return calculateStockAlertStatus(longueurTotale, seuil);
     });
@@ -827,7 +818,6 @@ export default function StockTigesFiletees() {
                   <th className="px-4 py-4 text-left">Diamètre</th>
                   <th className="px-4 py-4 text-left">Stock</th>
                   <th className="px-4 py-4 text-left">Longueur totale disponible</th>
-                  <th className="px-4 py-4 text-left">Longueurs disponibles</th>
                   <th className="px-4 py-4 text-left">Seuil</th>
                   <th className="px-4 py-4 text-left">Statut</th>
                   <th className="px-4 py-4 text-right">Actions</th>

@@ -24,6 +24,7 @@ import {
   type StockAlertDisplayStatus,
 } from "@/lib/stock-alerts";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 
 type StockTube = {
   id: number;
@@ -91,6 +92,10 @@ function normaliserNombre(value: string) {
   return value.replace(",", ".").trim();
 }
 
+function aUneLongueurUtilisable(tube: StockTube) {
+  return tube.statut === "disponible" && Number(tube.longueur_disponible) > 0;
+}
+
 function messageErreur(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -144,7 +149,7 @@ function FragmentRow({
     : groupe.statut === "a_recommander"
       ? "bg-orange-50/70 hover:bg-orange-50"
       : "bg-white hover:bg-slate-50";
-  const morceauxDisponibles = groupe.items.filter((tube) => tube.statut === "disponible").length;
+  const morceauxDisponibles = groupe.items.filter(aUneLongueurUtilisable).length;
   return (
     <>
       <tr className={`border-b transition ${premiumLayout ? rowTone : "bg-white hover:bg-slate-50"}`}>
@@ -171,6 +176,7 @@ function FragmentRow({
           <td className="px-4 py-4 text-sm text-slate-500">{exemple.nuance || "—"}</td>
         </>}
         <td className="px-4 py-4">
+          <StockOrderButton compact target={{ source: "tubes", referenceKey: groupe.key, article: `${nomType(exemple.type)} ${exemple.section}`, famille: `Tubes ${nomMatiere(exemple.matiere)}`, stockActuel: groupe.longueurTotale, seuil: groupe.seuil, uniteStock: "mm" }} />
           <span className="text-xs font-medium text-slate-400">{ouvert ? "Masquer" : "Détails"}</span>
         </td>
       </tr>
@@ -179,10 +185,10 @@ function FragmentRow({
         <tr className="border-b bg-slate-50/70">
           <td colSpan={premiumLayout ? 11 : 10} className="px-10 py-3">
             <div className="rounded-2xl border border-slate-200 bg-white">
-              {groupe.items.map((tube, index) => {
+              {groupe.items.filter(aUneLongueurUtilisable).map((tube, index, morceauxUtilisables) => {
                 const estPlein = tube.statut === "disponible" && tube.parent_id == null;
                 return (
-                  <div key={tube.id} className={`flex items-center justify-between gap-4 px-4 py-3 ${index !== groupe.items.length - 1 ? "border-b border-slate-100" : ""}`}>
+                  <div key={tube.id} className={`flex items-center justify-between gap-4 px-4 py-3 ${index !== morceauxUtilisables.length - 1 ? "border-b border-slate-100" : ""}`}>
                     <div className="flex min-w-0 items-center gap-3">
                       <span className={`h-2.5 w-2.5 flex-none rounded-full ${tube.statut === "utilise" ? "bg-slate-300" : estPlein ? "bg-green-500" : "bg-[#F95516]"}`} />
                       <div className="min-w-0">
@@ -544,7 +550,7 @@ export default function Stock({ matiere, premiumLayout = false }: StockProps) {
     }), [tubes, recherche, matiere, filtreMatiere, filtreType, filtreSection, filtreNuance]);
 
   const tubesFiltres = useMemo(
-    () => tubesCorrespondants.filter((tube) => tube.statut === "disponible"),
+    () => tubesCorrespondants.filter(aUneLongueurUtilisable),
     [tubesCorrespondants],
   );
 
@@ -569,7 +575,7 @@ export default function Stock({ matiere, premiumLayout = false }: StockProps) {
       ? entries.filter(([, items]) => items.some((tube) => tubesCorrespondants.some((correspondant) => correspondant.id === tube.id)))
       : entries;
     return entriesVisibles.map(([key, items]) => {
-      const longueurTotale = items.reduce((total, tube) => total + (tube.statut === "disponible" ? Number(tube.longueur_disponible || 0) : 0), 0);
+      const longueurTotale = items.filter(aUneLongueurUtilisable).reduce((total, tube) => total + Number(tube.longueur_disponible), 0);
       const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
       return {
         key,
@@ -590,13 +596,13 @@ export default function Stock({ matiere, premiumLayout = false }: StockProps) {
       map.set(key, items);
     }
     return Array.from(map.entries()).map(([key, items]) => {
-      const longueurTotale = items.reduce((total, tube) => total + (tube.statut === "disponible" ? Number(tube.longueur_disponible || 0) : 0), 0);
+      const longueurTotale = items.filter(aUneLongueurUtilisable).reduce((total, tube) => total + Number(tube.longueur_disponible), 0);
       const seuil = Object.prototype.hasOwnProperty.call(seuils, key) ? seuils[key] : null;
       return { statut: calculateStockAlertStatus(longueurTotale, seuil) };
     });
   }, [seuils, tubesPage]);
 
-  const morceauxDisponibles = tubesPage.filter((tube) => tube.statut === "disponible").length;
+  const morceauxDisponibles = tubesPage.filter(aUneLongueurUtilisable).length;
   const alertesMatiere = groupesMatiere.filter((groupe) => groupe.statut === "a_recommander" || groupe.statut === "rupture").length;
   const rupturesMatiere = groupesMatiere.filter((groupe) => groupe.statut === "rupture").length;
 
@@ -739,7 +745,7 @@ export default function Stock({ matiere, premiumLayout = false }: StockProps) {
                   <th className="px-4 py-4">Épaisseur</th>
                   <th className="px-4 py-4">Stock</th>
                   {premiumLayout ? <>
-                    <th className="px-4 py-4">Longueur(s) disponible(s)</th>
+                    <th className="px-4 py-4">Longueur totale disponible</th>
                     <th className="px-4 py-4">Nuance</th>
                     <th className="px-4 py-4">Seuil</th>
                     <th className="px-4 py-4">Statut</th>
@@ -754,7 +760,7 @@ export default function Stock({ matiere, premiumLayout = false }: StockProps) {
               <tbody>
                 {groupes.map((groupe) => {
                   const ouvert = !!groupesOuverts[groupe.key];
-                  const disponibleItems = groupe.items.filter((tube) => tube.statut === "disponible");
+                  const disponibleItems = groupe.items.filter(aUneLongueurUtilisable);
                   const plein = disponibleItems.filter((tube) => tube.parent_id == null);
                   const restes = disponibleItems.filter((tube) => tube.parent_id != null);
                   const exemple = groupe.items[0];

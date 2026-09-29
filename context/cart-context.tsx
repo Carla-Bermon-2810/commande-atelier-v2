@@ -16,6 +16,16 @@ export interface CartItem {
   catalogueId?: number;
   /** Libellé de variante conservé comme snapshot lorsque disponible. */
   variante?: string;
+  /** Identité exacte d'une référence ajoutée depuis le Stock. */
+  stockReference?: {
+    source: "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts" | "rivets" | "forets" | "fraises" | "tarauds";
+    referenceId?: number;
+    referenceKey?: string;
+    uniteCommande: "piece" | "boite" | "barre";
+    uniteStock: "pieces" | "mm";
+    facteurConversion: number;
+    longueurParBarreMm?: number;
+  };
   quantite: number;
 }
 
@@ -23,7 +33,12 @@ export interface CartItem {
  * Une ligne de panier catalogue est identifiée par sa variante réelle. Les
  * demandes anciennes ou hors catalogue restent identifiées par leur libellé.
  */
-export function cartItemKey(item: Pick<CartItem, "article" | "catalogueId" | "variante">) {
+export function cartItemKey(item: Pick<CartItem, "article" | "catalogueId" | "variante" | "stockReference">) {
+  if (item.stockReference) {
+    const stock = item.stockReference;
+    const identity = typeof stock.referenceId === "number" ? String(stock.referenceId) : stock.referenceKey?.trim().toLocaleLowerCase("fr") ?? "";
+    return `stock-${stock.source}-${identity}-${stock.uniteCommande}-${stock.facteurConversion}-${stock.longueurParBarreMm ?? ""}`;
+  }
   if (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0) {
     return `catalogue-${item.catalogueId}`;
   }
@@ -55,6 +70,7 @@ function isCartItem(value: unknown): value is CartItem {
   if (!value || typeof value !== "object") return false;
 
   const item = value as Record<string, unknown>;
+  const stockReference = item.stockReference as Record<string, unknown> | undefined;
 
   return (
     typeof item.article === "string" &&
@@ -64,7 +80,18 @@ function isCartItem(value: unknown): value is CartItem {
     item.quantite > 0 &&
     (item.photo === undefined || typeof item.photo === "string") &&
     (item.catalogueId === undefined || (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0)) &&
-    (item.variante === undefined || typeof item.variante === "string")
+    (item.variante === undefined || typeof item.variante === "string") &&
+    (item.stockReference === undefined || (
+      typeof stockReference === "object" && stockReference !== null &&
+      typeof stockReference.source === "string" &&
+      (["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"] as string[]).includes(stockReference.source) &&
+      (["piece", "boite", "barre"] as string[]).includes(String(stockReference.uniteCommande)) &&
+      (["pieces", "mm"] as string[]).includes(String(stockReference.uniteStock)) &&
+      typeof stockReference.facteurConversion === "number" && Number.isFinite(stockReference.facteurConversion) && stockReference.facteurConversion > 0 &&
+      (stockReference.referenceId === undefined || (typeof stockReference.referenceId === "number" && Number.isSafeInteger(stockReference.referenceId) && stockReference.referenceId > 0)) &&
+      (stockReference.referenceKey === undefined || typeof stockReference.referenceKey === "string") &&
+      (stockReference.longueurParBarreMm === undefined || (typeof stockReference.longueurParBarreMm === "number" && Number.isFinite(stockReference.longueurParBarreMm) && stockReference.longueurParBarreMm > 0))
+    ))
   );
 }
 

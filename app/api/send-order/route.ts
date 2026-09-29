@@ -10,6 +10,15 @@ type OrderArticle = {
   catalogueId?: number;
   variante?: string;
   photo?: string;
+  stockReference?: {
+    source: string;
+    referenceId?: number;
+    referenceKey?: string;
+    uniteCommande: "piece" | "boite" | "barre";
+    uniteStock: "pieces" | "mm";
+    facteurConversion: number;
+    longueurParBarreMm?: number;
+  };
   quantite: number;
 };
 
@@ -54,11 +63,24 @@ function parseOrder(payload: unknown): OrderPayload | null {
       ? article.photo.trim().slice(0, 2_000)
       : undefined;
     const quantite = Number(article.quantite);
+    const stockInput = article.stockReference;
+    const stockReference = stockInput && typeof stockInput === "object"
+      ? stockInput as Record<string, unknown>
+      : undefined;
+    const stockSource = stockReference?.source;
+    const validStockSource = typeof stockSource === "string" && ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"].includes(stockSource);
+    const referenceId = Number(stockReference?.referenceId);
+    const referenceKey = typeof stockReference?.referenceKey === "string" ? stockReference.referenceKey.trim().slice(0, 300) : undefined;
+    const uniteCommande = stockReference?.uniteCommande;
+    const uniteStock = stockReference?.uniteStock;
+    const facteurConversion = Number(stockReference?.facteurConversion);
+    const longueurParBarreMm = Number(stockReference?.longueurParBarreMm);
 
     if (
       !nom ||
       !Number.isInteger(quantite) || quantite < 1 || quantite > 10_000 ||
       (article.catalogueId !== undefined && (!Number.isSafeInteger(catalogueId) || catalogueId < 1))
+      || (stockReference !== undefined && (!validStockSource || (!Number.isSafeInteger(referenceId) && !referenceKey) || !["piece", "boite", "barre"].includes(String(uniteCommande)) || !["pieces", "mm"].includes(String(uniteStock)) || !Number.isFinite(facteurConversion) || facteurConversion <= 0 || (stockReference.longueurParBarreMm !== undefined && (!Number.isFinite(longueurParBarreMm) || longueurParBarreMm <= 0))))
     ) {
       return null;
     }
@@ -69,6 +91,15 @@ function parseOrder(payload: unknown): OrderPayload | null {
       catalogueId: article.catalogueId === undefined ? undefined : catalogueId,
       variante,
       photo,
+      stockReference: stockReference ? {
+        source: stockSource as string,
+        referenceId: Number.isSafeInteger(referenceId) ? referenceId : undefined,
+        referenceKey,
+        uniteCommande: uniteCommande as "piece" | "boite" | "barre",
+        uniteStock: uniteStock as "pieces" | "mm",
+        facteurConversion,
+        longueurParBarreMm: Number.isFinite(longueurParBarreMm) ? longueurParBarreMm : undefined,
+      } : undefined,
       quantite,
     };
   });
@@ -140,6 +171,7 @@ export async function POST(req: Request) {
         designation_snapshot: article.article,
         variante_snapshot: article.variante ?? null,
         photo_snapshot: article.photo ?? null,
+        stock_reference_snapshot: article.stockReference ?? null,
         quantite: article.quantite,
       }))
     );

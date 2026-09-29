@@ -44,6 +44,7 @@ export default function CartItem({ article }: Props) {
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-bold text-[#17232b] sm:text-base">{article.article}</h2>
           <p className="mt-1 text-xs text-slate-500">{article.famille}</p>
+          {article.variante && <p className="mt-1 text-xs font-medium text-slate-500">{article.variante}</p>}
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:ml-0">

@@ -1,12 +1,10 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
-
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, Box, Loader2, PackagePlus, Search, ShoppingCart, TriangleAlert } from "lucide-react";
+import { AlertTriangle, Box, Loader2, PackagePlus, Search, TriangleAlert } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
-import { useCart } from "@/context/cart-context";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 import { stockAlertStatusLabel } from "@/lib/stock-alerts";
 import { useStockAlerts, type StockAlertView } from "@/lib/stock-alerts-client";
 
@@ -19,7 +17,6 @@ function StatusBadge({ alert }: { alert: StockAlertView }) {
 
 export default function StockAlertsCenter() {
   const { data, isLoading } = useStockAlerts();
-  const { addToCart } = useCart();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | "a_recommander" | "rupture">("all");
   const [category, setCategory] = useState("all");
@@ -55,11 +52,11 @@ export default function StockAlertsCenter() {
         <div className="border-b border-slate-200 px-5 py-4 text-sm font-semibold text-slate-600">{alerts.length} référence{alerts.length > 1 ? "s" : ""} à traiter · les ruptures sont affichées en premier</div>
         <div className="divide-y divide-slate-100">{alerts.map((alert) => <article key={alert.id} className={`flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center ${alert.statut === "rupture" ? "bg-red-50/45" : "bg-orange-50/35"}`}>
           <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">{alert.panier?.photo ? <img src={alert.panier.photo} alt="" className="h-full w-full object-contain p-1" /> : <PackagePlus className="text-slate-300" size={27} />}</div>
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white"><PackagePlus className="text-slate-300" size={27} /></div>
             <div className="min-w-0"><h2 className="truncate font-bold text-[#17232b]">{alert.libelle}</h2><p className="mt-1 text-xs font-medium text-slate-500">{alert.categorie} · {alert.famille} · Réf. {alert.referenceKey}</p><div className="mt-2 lg:hidden"><StatusBadge alert={alert} /></div></div>
           </div>
           <div className="grid grid-cols-3 gap-3 text-sm lg:min-w-[300px]"><div><p className="text-xs text-slate-500">Stock actuel</p><p className="mt-1 font-bold text-[#17232b]">{alert.stockActuel.toLocaleString("fr-FR")} {alert.unite}</p></div><div><p className="text-xs text-slate-500">Seuil</p><p className="mt-1 font-bold text-[#17232b]">{alert.seuil === null ? "Non défini" : `${alert.seuil.toLocaleString("fr-FR")} ${alert.unite}`}</p></div><div className="hidden lg:block"><p className="text-xs text-slate-500">Statut</p><div className="mt-1"><StatusBadge alert={alert} /></div></div></div>
-          <div className="flex shrink-0 gap-2"><Link href={alert.stockUrl} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-white">Voir</Link>{alert.panier ? <button type="button" onClick={() => addToCart({ ...alert.panier!, quantite: 1 })} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-sm font-bold text-white hover:bg-[#e04d13]"><ShoppingCart size={17} />Ajouter</button> : <span title="Cette référence n’est pas encore liée de manière certaine au catalogue." className="inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-center text-xs font-semibold text-slate-500">Non lié au catalogue</span>}</div>
+          <div className="flex shrink-0 gap-2"><Link href={alert.stockUrl} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-white">Voir</Link><StockOrderButton compact target={{ source: alert.source, referenceKey: alert.referenceKey, article: alert.libelle, famille: alert.famille, stockActuel: alert.stockActuel, seuil: alert.seuil, uniteStock: alert.unite, piecesParBoite: alert.piecesParBoite }} /></div>
         </article>)}</div>
       </section>}
     </div>

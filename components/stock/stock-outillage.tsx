@@ -15,6 +15,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 
 type TypeOutillage = "forets" | "fraises" | "tarauds";
 
@@ -821,6 +822,8 @@ export default function StockOutillage({
 
                     {/* ACTIONS */}
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 xl:flex-nowrap">
+
+                      <StockOrderButton compact target={{ source: type, referenceId: outil.id, referenceKey: outil.reference || outil.dimension || String(outil.id), article: outil.designation || outil.reference || `${currentConfig.titre} ${outil.dimension}`, famille: currentConfig.titre, stockActuel: outil.quantite, seuil: outil.seuil_minimum || null, uniteStock: "pieces" }} />
 
                       {/* SORTIE */}
                       <button

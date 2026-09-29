@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -891,6 +892,8 @@ export default function StockVis() {
                     {/* ACTIONS */}
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
+
+                      <StockOrderButton compact target={{ source: "vis", referenceId: item.id, referenceKey: item.reference, article: item.designation || item.reference, famille: "Vis", stockActuel: getStock(item), seuil: item.seuilBoites * item.piecesParBoite || null, uniteStock: "pieces", piecesParBoite: item.piecesParBoite }} />
 
                       <button
                         type="button"

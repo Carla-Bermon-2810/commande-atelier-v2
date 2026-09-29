@@ -9,17 +9,8 @@ import type {
 
 export const STOCK_ALERTS_UPDATED_EVENT = "stock-alerts-updated";
 
-export type StockAlertCartLink = {
-  catalogueId: number;
-  article: string;
-  famille: string;
-  variante?: string;
-  photo?: string;
-};
-
 export type StockAlertView = StockAlertReference & {
   stockUrl: string;
-  panier: StockAlertCartLink | null;
 };
 
 export type StockAlertsPayload = {

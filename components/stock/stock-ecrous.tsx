@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { notifyStockAlertsUpdated } from "@/lib/stock-alerts-client";
+import { StockOrderButton } from "@/components/cart/StockOrderButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -1024,6 +1025,8 @@ export default function StockEcrous() {
                         {/* ACTIONS */}
 
                         <div className="flex shrink-0 flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
+
+                          <StockOrderButton compact target={{ source: "ecrous", referenceId: ecrou.id, referenceKey: ecrou.reference, article: `Écrou ${ecrou.reference} ${ecrou.dimension ?? ""}`.trim(), famille: "Écrous", stockActuel: getStock(ecrou), seuil: ecrou.seuil_boites * ecrou.pieces_par_boite || null, uniteStock: "pieces", piecesParBoite: ecrou.pieces_par_boite }} />
 
                           <button
                             type="button"
