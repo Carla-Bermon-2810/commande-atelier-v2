@@ -27,7 +27,7 @@ type ProduitModal = {
   produit: string;
   famille: string;
   photo?: string | null;
-  variants: { dimension?: string | null; grain?: string | null }[];
+  variants: { catalogueId: number; dimension?: string | null; grain?: string | null }[];
 };
 
 type Props = {
@@ -117,6 +117,7 @@ export default function CatalogueClient({
       famille: produit.famille,
       photo: getPhotoUrl(photo),
       variants: variantes.map((item) => ({
+        catalogueId: item.id,
         dimension: item.dimension,
         grain: item.grain,
       })),

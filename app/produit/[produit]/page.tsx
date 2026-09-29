@@ -52,21 +52,15 @@ export default async function ProduitPage({ params }: Props) {
     ? cheminPhoto.startsWith("http") ? cheminPhoto : supabase.storage.from("photos").getPublicUrl(cheminPhoto).data.publicUrl
     : null;
 
-  // Toutes les variantes de grain disponibles
-  const grains = Array.from(
-    new Set(
-      variantes
-        .map((v) => v.grain)
-        .filter(Boolean)
-    )
-  ) as string[];
-
-    const produitDetails = {
+  const produitDetails = {
     produit: nomProduit,
     famille: variantes[0].famille ?? "",
     photo,
-    dimension: variantes[0].dimension ?? null,
-    grains,
+    variants: variantes.map((variante) => ({
+      catalogueId: variante.id,
+      dimension: variante.dimension ?? null,
+      grain: variante.grain ?? null,
+    })),
   };
 
   return (

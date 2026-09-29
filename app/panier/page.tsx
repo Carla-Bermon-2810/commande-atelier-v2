@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, PackagePlus, Send, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { useCart } from "@/context/cart-context";
+import { cartItemKey, useCart } from "@/context/cart-context";
 import CartItem from "@/components/cart/CartItem";
 
 type Feedback = { type: "error" | "success"; message: string } | null;
@@ -153,7 +153,7 @@ export default function PanierPage() {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">Produits de votre demande</div>
-              {cart.map((article) => <CartItem key={article.article} article={article} />)}
+              {cart.map((article) => <CartItem key={cartItemKey(article)} article={article} />)}
             </div>
 
             <aside className="h-fit rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 sm:p-6">

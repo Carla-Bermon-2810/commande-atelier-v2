@@ -19,6 +19,18 @@ export interface CartItem {
   quantite: number;
 }
 
+/**
+ * Une ligne de panier catalogue est identifiée par sa variante réelle. Les
+ * demandes anciennes ou hors catalogue restent identifiées par leur libellé.
+ */
+export function cartItemKey(item: Pick<CartItem, "article" | "catalogueId" | "variante">) {
+  if (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0) {
+    return `catalogue-${item.catalogueId}`;
+  }
+
+  return `libre-${item.article.trim().toLocaleLowerCase("fr")}-${item.variante?.trim().toLocaleLowerCase("fr") ?? ""}`;
+}
+
 interface CartContextType {
   cart: CartItem[];
 
@@ -26,13 +38,13 @@ interface CartContextType {
 
   addToCart: (item: CartItem) => void;
 
-  removeFromCart: (article: string) => void;
+  removeFromCart: (item: CartItem) => void;
 
-  increaseQuantity: (article: string) => void;
+  increaseQuantity: (item: CartItem) => void;
 
-  decreaseQuantity: (article: string) => void;
+  decreaseQuantity: (item: CartItem) => void;
 
-  updateQuantity: (article: string, quantite: number) => void;
+  updateQuantity: (item: CartItem, quantite: number) => void;
 
   clearCart: () => void;
 }
@@ -96,12 +108,12 @@ export function CartProvider({
   function addToCart(item: CartItem) {
     setCart((oldCart) => {
       const exist = oldCart.find(
-        (a) => a.article === item.article
+        (a) => cartItemKey(a) === cartItemKey(item)
       );
 
       if (exist) {
         return oldCart.map((a) =>
-          a.article === item.article
+          cartItemKey(a) === cartItemKey(item)
             ? {
                 ...a,
                 quantite: Math.min(10_000, a.quantite + item.quantite),
@@ -114,10 +126,10 @@ export function CartProvider({
     });
   }
 
-  function increaseQuantity(article: string) {
+  function increaseQuantity(item: CartItem) {
     setCart((oldCart) =>
       oldCart.map((a) =>
-        a.article === article
+        cartItemKey(a) === cartItemKey(item)
           ? {
               ...a,
               quantite: Math.min(10_000, a.quantite + 1),
@@ -127,11 +139,11 @@ export function CartProvider({
     );
   }
 
-  function decreaseQuantity(article: string) {
+  function decreaseQuantity(item: CartItem) {
     setCart((oldCart) =>
       oldCart
         .map((a) =>
-          a.article === article
+            cartItemKey(a) === cartItemKey(item)
             ? {
                 ...a,
                 quantite: a.quantite - 1,
@@ -142,10 +154,10 @@ export function CartProvider({
     );
   }
   
-  function updateQuantity(article: string, quantite: number) {
+  function updateQuantity(item: CartItem, quantite: number) {
     setCart((oldCart) =>
       oldCart.map((a) =>
-        a.article === article
+        cartItemKey(a) === cartItemKey(item)
           ? {
               ...a,
               quantite: Math.min(10_000, Math.max(1, quantite)),
@@ -155,9 +167,9 @@ export function CartProvider({
     );
   }
   
-  function removeFromCart(article: string) {
+  function removeFromCart(item: CartItem) {
     setCart((oldCart) =>
-      oldCart.filter((a) => a.article !== article)
+      oldCart.filter((a) => cartItemKey(a) !== cartItemKey(item))
     );
   }
 

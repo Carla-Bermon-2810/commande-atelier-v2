@@ -84,6 +84,8 @@ export default function ProductModal({ open, onClose, produit }: Props) {
                     article: libelleVariante === "Standard" ? produit.produit : `${produit.produit} — ${libelleVariante}`,
                     famille: produit.famille,
                     photo: produit.photo ?? undefined,
+                    catalogueId: variante.catalogueId,
+                    variante: libelleVariante === "Standard" ? undefined : libelleVariante,
                     quantite,
                   });
                   onClose();

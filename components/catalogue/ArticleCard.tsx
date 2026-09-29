@@ -27,6 +27,8 @@ export default function ArticleCard({ article }: Props) {
       article: nom,
       famille: article.famille,
       photo: article.photo || undefined,
+      catalogueId: article.id,
+      variante: [article.dimension, article.grain].filter(Boolean).join(" • ") || undefined,
       quantite: 1,
     });
   }

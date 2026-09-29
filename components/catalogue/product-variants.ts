@@ -1,4 +1,6 @@
 export type ProductVariant = {
+  /** Identifiant de la ligne catalogue : une variante précise, pas seulement le produit. */
+  catalogueId?: number;
   dimension?: string | null;
   grain?: string | null;
 };

@@ -3,31 +3,33 @@
 import { useState } from "react";
 import { ShoppingCart, Minus, Plus, ImageOff } from "lucide-react";
 import { useCart } from "@/context/cart-context";
+import { variantLabel, type ProductVariant } from "./product-variants";
 
 interface Props {
   produit: {
     produit: string;
     famille: string;
     photo?: string | null;
-    dimension?: string | null;
-    grains: string[];
+    variants: ProductVariant[];
   };
 }
 
 export default function ProductDetails({ produit }: Props) {
   const { addToCart } = useCart();
 
-  const [grainSelectionne, setGrainSelectionne] = useState(
-    produit.grains[0] ?? ""
-  );
+  const [selection, setSelection] = useState(0);
 
   const [quantite, setQuantite] = useState(1);
+  const variante = produit.variants[selection] ?? {};
+  const libelleVariante = variantLabel(variante);
 
   function ajouterAuPanier() {
     addToCart({
-      article: `${produit.produit} ${grainSelectionne}`.trim(),
+      article: libelleVariante === "Standard" ? produit.produit : `${produit.produit} — ${libelleVariante}`,
       famille: produit.famille,
       photo: produit.photo ?? undefined,
+      catalogueId: variante.catalogueId,
+      variante: libelleVariante === "Standard" ? undefined : libelleVariante,
       quantite,
     });
   }
@@ -63,33 +65,25 @@ export default function ProductDetails({ produit }: Props) {
             Famille : <strong>{produit.famille}</strong>
           </p>
 
-          {produit.dimension && (
-            <p className="mt-2 text-slate-500">
-              Dimension :{" "}
-              <strong>{produit.dimension}</strong>
-            </p>
-          )}
-
-          {/* GRAIN */}
-          {produit.grains.length > 0 && (
+          {produit.variants.length > 0 && (
             <div className="mt-8">
               <p className="mb-3 text-sm font-semibold text-slate-700">
-                Choisir le grain
+                Choisir une variante
               </p>
 
               <div className="flex flex-wrap gap-3">
-                {produit.grains.map((grain) => (
+                {produit.variants.map((item, index) => (
                   <button
-                    key={grain}
+                    key={item.catalogueId ?? `${variantLabel(item)}-${index}`}
                     type="button"
-                    onClick={() => setGrainSelectionne(grain)}
+                    onClick={() => setSelection(index)}
                     className={`rounded-2xl border px-5 py-2.5 text-sm font-semibold transition ${
-                      grainSelectionne === grain
+                      selection === index
                         ? "border-[#F95516] bg-orange-50 text-[#F95516] shadow-sm"
                         : "border-slate-200 bg-white shadow-sm hover:border-[#F95516]"
                     }`}
                   >
-                    {grain}
+                    {variantLabel(item)}
                   </button>
                 ))}
               </div>

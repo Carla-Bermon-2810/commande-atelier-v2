@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart } from "@/context/cart-context";
+import { cartItemKey, useCart } from "@/context/cart-context";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { envoyerCommande } from "@/lib/commandes";
@@ -64,7 +64,7 @@ export default function CartSheet() {
         ) : (
           cart.map((item) => (
             <div
-              key={item.article}
+              key={cartItemKey(item)}
               className="rounded-xl border p-4"
             >
               <h3 className="font-medium">
@@ -89,7 +89,7 @@ export default function CartSheet() {
                   <Button
                     size="icon-sm"
                     variant="outline"
-                    onClick={() => decreaseQuantity(item.article)}
+                    onClick={() => decreaseQuantity(item)}
                   >
                     <Minus />
                   </Button>
@@ -101,7 +101,7 @@ export default function CartSheet() {
                   <Button
                     size="icon-sm"
                     variant="outline"
-                    onClick={() => increaseQuantity(item.article)}
+                    onClick={() => increaseQuantity(item)}
                   >
                     <Plus />
                   </Button>
@@ -111,7 +111,7 @@ export default function CartSheet() {
                 <Button
                   size="icon-sm"
                   variant="ghost"
-                  onClick={() => removeFromCart(item.article)}
+                  onClick={() => removeFromCart(item)}
                 >
                   <Trash2 />
                 </Button>

@@ -2,14 +2,7 @@
 
 import { ImageOff, Minus, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useCart } from "@/context/cart-context";
-
-interface CartArticle {
-  article: string;
-  famille: string;
-  photo?: string;
-  quantite: number;
-}
+import { cartItemKey, type CartItem as CartArticle, useCart } from "@/context/cart-context";
 
 interface Props {
   article: CartArticle;
@@ -26,7 +19,7 @@ export default function CartItem({ article }: Props) {
 
     if (!Number.isInteger(quantite)) return;
 
-    updateQuantity(article.article, Math.min(MAX_QUANTITE, Math.max(1, quantite)));
+    updateQuantity(article, Math.min(MAX_QUANTITE, Math.max(1, quantite)));
   }
 
   return (
@@ -54,18 +47,18 @@ export default function CartItem({ article }: Props) {
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:ml-0">
-          <label htmlFor={`quantite-${article.article}`} className="sr-only">Quantité</label>
+          <label htmlFor={`quantite-${cartItemKey(article)}`} className="sr-only">Quantité</label>
           <div className="flex items-center rounded-lg border border-slate-200">
             <button
               type="button"
-              onClick={() => decreaseQuantity(article.article)}
+              onClick={() => decreaseQuantity(article)}
               className="flex min-h-10 min-w-10 items-center justify-center rounded-l-lg bg-white text-slate-700 hover:text-[#F95516]"
               aria-label={`Retirer une unité de ${article.article}`}
             >
               <Minus size={20} />
             </button>
             <input
-              id={`quantite-${article.article}`}
+              id={`quantite-${cartItemKey(article)}`}
               type="number"
               inputMode="numeric"
               min="1"
@@ -76,7 +69,7 @@ export default function CartItem({ article }: Props) {
             />
             <button
               type="button"
-              onClick={() => increaseQuantity(article.article)}
+              onClick={() => increaseQuantity(article)}
               disabled={article.quantite >= MAX_QUANTITE}
               className="flex min-h-10 min-w-10 items-center justify-center rounded-r-lg bg-white text-slate-700 hover:text-[#F95516] disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={`Ajouter une unité à ${article.article}`}
@@ -88,7 +81,7 @@ export default function CartItem({ article }: Props) {
 
         <button
           type="button"
-          onClick={() => removeFromCart(article.article)}
+          onClick={() => removeFromCart(article)}
           className="flex min-h-10 min-w-10 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
           aria-label={`Retirer ${article.article} du panier`}
         >
