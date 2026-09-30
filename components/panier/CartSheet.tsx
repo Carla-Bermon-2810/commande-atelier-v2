@@ -52,7 +52,7 @@ export default function CartSheet() {
         </h2>
 
         <p className="text-sm text-slate-500">
-          {totalItems} article{totalItems > 1 ? "s" : ""}
+          {totalItems} référence{totalItems > 1 ? "s" : ""}
         </p>
       </div>
 

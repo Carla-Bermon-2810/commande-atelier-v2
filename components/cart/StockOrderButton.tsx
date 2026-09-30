@@ -47,21 +47,19 @@ export function StockOrderButton({ target, compact = false }: { target: StockOrd
     ? (Number.isInteger(quantity) && quantity > 0 && Number.isFinite(lengthPerBar) && lengthPerBar > 0 ? quantity * lengthPerBar : null)
     : quantity * (packSize ?? 1);
   const canConfirm = Number.isInteger(quantity) && quantity > 0 && addedToStock !== null;
-  const commandUnit = target.uniteStock === "mm" ? "barre" : packSize ? "boîte" : "pièce";
-  const commandLabel = quantity > 1 ? `${commandUnit}s` : commandUnit;
 
   function confirm() {
     if (!canConfirm || addedToStock === null) return;
-    const suffix = target.uniteStock === "mm"
-      ? `${quantity} ${commandLabel} × ${format(lengthPerBar)} mm`
-      : packSize
-        ? `${quantity} ${commandLabel} de ${format(packSize)} pièces (${format(addedToStock)} pièces)`
-        : `${quantity} pièce${quantity > 1 ? "s" : ""}`;
     addToCart({
       article: target.article,
       famille: target.famille,
       photo: target.photo,
-      variante: `Commande stock · ${suffix}`,
+      unite: target.uniteStock === "mm"
+        ? `Barre de ${format(lengthPerBar)} mm`
+        : packSize
+          ? `Boîte de ${format(packSize)} pièce${packSize > 1 ? "s" : ""}`
+          : "Pièce",
+      referenceMetier: target.referenceKey || undefined,
       quantite: quantity,
       stockReference: {
         source: target.source,

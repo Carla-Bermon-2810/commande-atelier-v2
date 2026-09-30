@@ -10,6 +10,8 @@ type OrderArticle = {
   catalogueId?: number;
   variante?: string;
   photo?: string;
+  unite?: string;
+  referenceMetier?: string;
   stockReference?: {
     source: string;
     referenceId?: number;
@@ -21,6 +23,18 @@ type OrderArticle = {
     configuration?: Record<string, string | number | null>;
   };
   quantite: number;
+};
+
+type CatalogueStockLinkRow = {
+  catalogue_id: number;
+  stock_type: string;
+  stock_reference_id: number | null;
+  stock_reference_key: string | null;
+  unite_commande: "piece" | "boite" | "tube" | "tige";
+  unite_stock: "pieces" | "mm";
+  facteur_conversion: number | string;
+  actif: boolean;
+  configuration: Record<string, string | number | null> | null;
 };
 
 type OrderPayload = {
@@ -63,6 +77,12 @@ function parseOrder(payload: unknown): OrderPayload | null {
     const photo = typeof article.photo === "string"
       ? article.photo.trim().slice(0, 2_000)
       : undefined;
+    const unite = typeof article.unite === "string"
+      ? article.unite.trim().slice(0, 120) || undefined
+      : undefined;
+    const referenceMetier = typeof article.referenceMetier === "string"
+      ? article.referenceMetier.trim().slice(0, 300) || undefined
+      : undefined;
     const quantite = Number(article.quantite);
     const stockInput = article.stockReference;
     const stockReference = stockInput && typeof stockInput === "object"
@@ -95,6 +115,8 @@ function parseOrder(payload: unknown): OrderPayload | null {
       catalogueId: article.catalogueId === undefined ? undefined : catalogueId,
       variante,
       photo,
+      unite,
+      referenceMetier,
       stockReference: stockReference ? {
         source: stockSource as string,
         referenceId: Number.isSafeInteger(referenceId) ? referenceId : undefined,
@@ -112,6 +134,85 @@ function parseOrder(payload: unknown): OrderPayload | null {
   return articles.every((article): article is OrderArticle => article !== null)
     ? { demandeur, commentaire, articles }
     : null;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("fr-FR").format(value);
+}
+
+function libelleUnite(snapshot: NonNullable<OrderArticle["stockReference"]>) {
+  if (snapshot.uniteCommande === "barre") {
+    return snapshot.longueurParBarreMm
+      ? `Barre de ${formatNumber(snapshot.longueurParBarreMm)} mm`
+      : "Longueur à confirmer à la réception";
+  }
+  if (snapshot.uniteCommande === "boite") {
+    return `Boîte de ${formatNumber(snapshot.facteurConversion)} pièce${snapshot.facteurConversion > 1 ? "s" : ""}`;
+  }
+  return "Pièce";
+}
+
+function snapshotDepuisLiaison(liaison: CatalogueStockLinkRow): NonNullable<OrderArticle["stockReference"]> | null {
+  const facteurConversion = Number(liaison.facteur_conversion);
+  const source = liaison.stock_type;
+  const isValidSource = ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"].includes(source);
+  if (!liaison.actif || !isValidSource || !Number.isFinite(facteurConversion) || facteurConversion <= 0) return null;
+  if (!Number.isSafeInteger(liaison.stock_reference_id) && !liaison.stock_reference_key) return null;
+
+  return {
+    source,
+    referenceId: Number.isSafeInteger(liaison.stock_reference_id) ? liaison.stock_reference_id ?? undefined : undefined,
+    referenceKey: liaison.stock_reference_key ?? undefined,
+    uniteCommande: liaison.unite_commande === "boite" ? "boite" : liaison.unite_commande === "piece" ? "piece" : "barre",
+    uniteStock: liaison.unite_stock,
+    facteurConversion,
+    configuration: liaison.configuration ?? undefined,
+  };
+}
+
+async function enrichirArticlesDepuisLiaisons(supabase: ReturnType<typeof getServerSupabase>, articles: OrderArticle[]) {
+  const catalogueIds = [...new Set(articles.flatMap((article) => article.catalogueId ? [article.catalogueId] : []))];
+  const nettoyerVarianteStock = (article: OrderArticle) => article.variante?.startsWith("Commande stock ·")
+    ? { ...article, variante: undefined }
+    : article;
+  if (!catalogueIds.length) {
+    return articles.map((rawArticle) => {
+      const article = nettoyerVarianteStock(rawArticle);
+      return article.stockReference
+        ? { ...article, unite: libelleUnite(article.stockReference) }
+        : article;
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("catalogue_stock_liaisons")
+    .select("catalogue_id,stock_type,stock_reference_id,stock_reference_key,unite_commande,unite_stock,facteur_conversion,actif,configuration")
+    .in("catalogue_id", catalogueIds)
+    .eq("actif", true)
+    .returns<CatalogueStockLinkRow[]>();
+
+  // Une indisponibilité ponctuelle du référentiel ne doit jamais empêcher une
+  // commande Catalogue valide : elle sera simplement sans entrée Stock future.
+  if (error) {
+    console.error("Référentiel Catalogue / Stock indisponible :", error);
+    return articles.map((rawArticle) => {
+      const article = nettoyerVarianteStock(rawArticle);
+      return article.stockReference
+        ? { ...article, unite: libelleUnite(article.stockReference) }
+        : article;
+    });
+  }
+
+  const liaisonParCatalogue = new Map((data ?? []).map((liaison) => [liaison.catalogue_id, liaison]));
+  return articles.map((rawArticle) => {
+    const article = nettoyerVarianteStock(rawArticle);
+    if (article.stockReference) return { ...article, unite: libelleUnite(article.stockReference) };
+    const liaison = article.catalogueId ? liaisonParCatalogue.get(article.catalogueId) : undefined;
+    const stockReference = liaison ? snapshotDepuisLiaison(liaison) : null;
+    return stockReference
+      ? { ...article, stockReference, unite: libelleUnite(stockReference), referenceMetier: stockReference.referenceKey ?? article.referenceMetier }
+      : article;
+  });
 }
 
 function escapeHtml(value: string) {
@@ -151,9 +252,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const totalQuantite = payload.articles.reduce((total, article) => total + article.quantite, 0);
+    const articles = await enrichirArticlesDepuisLiaisons(supabase, payload.articles);
+    const commandePourPdf = { ...payload, articles };
+    const totalQuantite = articles.reduce((total, article) => total + article.quantite, 0);
     const pdf = apiKey
-      ? await createOrderPdf({ ...payload, numero, createdAt })
+      ? await createOrderPdf({ ...commandePourPdf, numero, createdAt })
       : null;
 
     const { data: commande, error: errorCommande } = await supabase
@@ -168,7 +271,7 @@ export async function POST(req: Request) {
     }
 
     const { error: errorLignes } = await supabase.from("commande_articles").insert(
-      payload.articles.map((article) => ({
+      articles.map((article) => ({
         commande_id: commande.id,
         article: article.article,
         famille: article.famille,
@@ -176,6 +279,7 @@ export async function POST(req: Request) {
         designation_snapshot: article.article,
         variante_snapshot: article.variante ?? null,
         photo_snapshot: article.photo ?? null,
+        unite_snapshot: article.unite ?? null,
         stock_reference_snapshot: article.stockReference ?? null,
         quantite: article.quantite,
       }))

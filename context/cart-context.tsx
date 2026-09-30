@@ -16,6 +16,10 @@ export interface CartItem {
   catalogueId?: number;
   /** Libellé de variante conservé comme snapshot lorsque disponible. */
   variante?: string;
+  /** Libellé commercial lisible conservé au moment de la commande. */
+  unite?: string;
+  /** Référence métier facultative, affichée uniquement lorsqu'elle aide l'atelier. */
+  referenceMetier?: string;
   /** Identité exacte d'une référence ajoutée depuis le Stock. */
   stockReference?: {
     source: "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts" | "rivets" | "forets" | "fraises" | "tarauds";
@@ -38,7 +42,11 @@ export function cartItemKey(item: Pick<CartItem, "article" | "catalogueId" | "va
   if (item.stockReference) {
     const stock = item.stockReference;
     const identity = typeof stock.referenceId === "number" ? String(stock.referenceId) : stock.referenceKey?.trim().toLocaleLowerCase("fr") ?? "";
-    return `stock-${stock.source}-${identity}-${stock.uniteCommande}-${stock.facteurConversion}-${stock.longueurParBarreMm ?? ""}`;
+    const configuration = Object.entries(stock.configuration ?? {})
+      .sort(([left], [right]) => left.localeCompare(right, "fr"))
+      .map(([key, value]) => `${key}:${String(value ?? "")}`)
+      .join("|");
+    return `stock-${stock.source}-${identity}-${stock.uniteCommande}-${stock.facteurConversion}-${stock.longueurParBarreMm ?? ""}-${item.variante?.trim().toLocaleLowerCase("fr") ?? ""}-${configuration}`;
   }
   if (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0) {
     return `catalogue-${item.catalogueId}`;
@@ -82,6 +90,8 @@ function isCartItem(value: unknown): value is CartItem {
     (item.photo === undefined || typeof item.photo === "string") &&
     (item.catalogueId === undefined || (typeof item.catalogueId === "number" && Number.isSafeInteger(item.catalogueId) && item.catalogueId > 0)) &&
     (item.variante === undefined || typeof item.variante === "string") &&
+    (item.unite === undefined || typeof item.unite === "string") &&
+    (item.referenceMetier === undefined || typeof item.referenceMetier === "string") &&
     (item.stockReference === undefined || (
       typeof stockReference === "object" && stockReference !== null &&
       typeof stockReference.source === "string" &&
@@ -206,10 +216,9 @@ export function CartProvider({
     setCart([]);
   }
 
-  const totalItems = cart.reduce(
-    (total, item) => total + item.quantite,
-    0
-  );
+  // Le compteur global représente les références différentes, jamais une
+  // addition d'unités hétérogènes (boîtes, pièces, barres, etc.).
+  const totalItems = cart.length;
 
   return (
     <CartContext.Provider

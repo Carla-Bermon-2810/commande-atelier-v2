@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2, PackagePlus, Send, Trash2 } from "lucide-react";
+import { Boxes, CheckCircle2, ClipboardList, Loader2, PackagePlus, Send, ShoppingCart, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { cartItemKey, useCart } from "@/context/cart-context";
 import CartItem from "@/components/cart/CartItem";
 
 type Feedback = { type: "error" | "success"; message: string } | null;
+type ContexteCatalogue = { unite?: string | null; referenceMetier?: string | null };
 
 export default function PanierPage() {
   const { cart, clearCart, addToCart } = useCart();
@@ -18,6 +19,26 @@ export default function PanierPage() {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [referenceManuelle, setReferenceManuelle] = useState("");
   const [quantiteManuelle, setQuantiteManuelle] = useState(1);
+  const [contextesCatalogue, setContextesCatalogue] = useState<Record<string, ContexteCatalogue>>({});
+
+  const catalogueIds = useMemo(
+    () => [...new Set(cart.flatMap((article) => article.catalogueId ? [article.catalogueId] : []))],
+    [cart]
+  );
+
+  useEffect(() => {
+    if (!catalogueIds.length) return;
+
+    const controller = new AbortController();
+    void fetch(`/api/panier-contexte?catalogueIds=${catalogueIds.join(",")}`, { signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<{ contextes?: Record<string, ContexteCatalogue> }> : { contextes: {} })
+      .then((data) => setContextesCatalogue(data.contextes ?? {}))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setContextesCatalogue({});
+      });
+    return () => controller.abort();
+  }, [catalogueIds]);
 
   function ajouterReferenceManuelle() {
     const reference = referenceManuelle.trim();
@@ -34,6 +55,7 @@ export default function PanierPage() {
     addToCart({
       article: `Hors catalogue — ${reference}`,
       famille: "Demande hors catalogue",
+      unite: "Unité non renseignée",
       quantite,
     });
     setReferenceManuelle("");
@@ -83,11 +105,11 @@ export default function PanierPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl py-4">
-        <div className="relative mb-5 overflow-hidden rounded-xl bg-[#142026] p-6 text-white sm:p-8" style={{ backgroundImage: "linear-gradient(90deg, rgba(10,20,26,.96), rgba(10,20,26,.72), rgba(10,20,26,.36)), url('/category-soudure-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
+      <div className="mx-auto max-w-7xl py-4 sm:py-6">
+        <div className="relative mb-5 overflow-hidden rounded-2xl bg-[#142026] p-6 text-white sm:mb-6 sm:p-8" style={{ backgroundImage: "linear-gradient(90deg, rgba(10,20,26,.96), rgba(10,20,26,.78), rgba(10,20,26,.42)), url('/category-soudure-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8d5c]">Commande Atelier</p>
           <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">Votre panier</h1>
-          <p className="mt-1 text-sm text-slate-200">{cart.length} article{cart.length > 1 ? "s" : ""} · Vérifiez les quantités avant l’envoi.</p>
+          <p className="mt-1 text-sm text-slate-200">{cart.length} référence{cart.length > 1 ? "s" : ""} à vérifier avant l’envoi.</p>
         </div>
 
         {feedback && (
@@ -104,7 +126,7 @@ export default function PanierPage() {
           </div>
         )}
 
-        <section className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4 sm:p-5" aria-labelledby="hors-catalogue-title">
+        <section className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 sm:mb-6 sm:p-5" aria-labelledby="hors-catalogue-title">
           <div className="flex gap-3">
             <PackagePlus className="mt-0.5 shrink-0 text-[#F95516]" size={22} aria-hidden="true" />
             <div className="min-w-0 flex-1">
@@ -138,27 +160,38 @@ export default function PanierPage() {
         </section>
 
         {feedback?.type === "success" && cart.length === 0 ? (
-          <section className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
             <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 size={34} /></span>
             <h2 className="mt-4 text-2xl font-bold">Demande envoyée !</h2>
             <p className="mt-2 text-sm text-slate-600">{feedback.message}</p>
             <Link href="/" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-[#F95516] px-5 text-sm font-bold text-white hover:bg-[#e04d13]">Retour au catalogue</Link>
           </section>
         ) : cart.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
-            <p className="text-xl font-bold text-[#2F3437]">Votre panier est vide.</p>
-            <p className="mt-2 text-slate-500">Ajoutez des articles depuis le catalogue pour créer une commande.</p>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center shadow-sm">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><ShoppingCart size={30} /></span>
+            <p className="mt-4 text-xl font-bold text-[#2F3437]">Votre panier est vide.</p>
+            <p className="mt-2 text-slate-500">Ajoutez des articles depuis le catalogue ou préparez un réapprovisionnement depuis le Stock.</p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link href="/#catalogue" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#F95516] px-5 font-bold text-white hover:bg-[#e04d13]">Voir le catalogue</Link>
+              <Link href="/stock" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 font-bold text-slate-700 hover:border-[#F95516] hover:text-[#F95516]">Voir le Stock</Link>
+            </div>
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">Produits de votre demande</div>
-              {cart.map((article) => <CartItem key={cartItemKey(article)} article={article} />)}
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-6">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#F95516] shadow-sm"><Boxes size={19} /></span>
+                <div><h2 className="font-bold text-[#17232b]">Articles de la demande</h2><p className="text-xs text-slate-500">Modifiez les quantités ou retirez une référence.</p></div>
+              </div>
+              {cart.map((article) => {
+                const contexte = article.catalogueId ? contextesCatalogue[String(article.catalogueId)] : undefined;
+                return <CartItem key={cartItemKey(article)} article={article} unite={article.unite ?? contexte?.unite} referenceMetier={article.referenceMetier ?? contexte?.referenceMetier} />;
+              })}
             </div>
 
-            <aside className="h-fit rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 sm:p-6">
-              <h2 className="text-xl font-bold text-[#2F3437]">Informations de la commande</h2>
-              <p className="mt-1 text-sm text-slate-500">Les champs marqués d’un astérisque sont obligatoires.</p>
+            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-24 sm:p-6">
+              <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#F95516]"><ClipboardList size={19} /></span><div><h2 className="text-xl font-bold text-[#2F3437]">Récapitulatif</h2><p className="mt-1 text-sm text-slate-500">{cart.length} référence{cart.length > 1 ? "s" : ""} différente{cart.length > 1 ? "s" : ""}.</p></div></div>
+              <p className="mt-5 rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">La date de la demande sera enregistrée automatiquement lors de l’envoi.</p>
 
               <div className="mt-6 space-y-5">
                 <div>
@@ -203,7 +236,7 @@ export default function PanierPage() {
                 </button>
               )}
 
-              <button type="button" onClick={envoyerCommande} disabled={isSubmitting} className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-base font-bold text-white shadow-sm hover:bg-[#e04d13] disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={envoyerCommande} disabled={isSubmitting || !demandeur.trim()} className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-base font-bold text-white shadow-sm hover:bg-[#e04d13] disabled:cursor-not-allowed disabled:opacity-60">
                 {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Envoi en cours…</> : <><Send size={20} /> Envoyer la commande</>}
               </button>
             </aside>

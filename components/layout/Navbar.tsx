@@ -13,12 +13,7 @@ import {
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { cart } = useCart();
-
-  const totalArticles = cart.reduce(
-    (total, article) => total + article.quantite,
-    0
-  );
+  const { totalItems } = useCart();
 
   return (
     <header className="sticky top-4 z-50 mb-8">
@@ -88,9 +83,9 @@ export default function Navbar() {
 
             Panier
 
-            {totalArticles > 0 && (
+            {totalItems > 0 && (
               <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-white px-2 text-xs font-bold text-[#F95516]">
-                {totalArticles}
+                {totalItems}
               </span>
             )}
           </Link>

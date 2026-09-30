@@ -4,6 +4,7 @@ export type PdfOrderArticle = {
   article: string;
   famille: string;
   quantite: number;
+  unite?: string;
 };
 
 type PdfOrder = {
@@ -138,7 +139,7 @@ export async function createOrderPdf(order: PdfOrder): Promise<Buffer> {
       x += widths[1];
       doc.font("Helvetica-Bold").fontSize(8.5).fillColor(INK).text(String(article.quantite), x + 8, y + 8, { width: widths[2] - 16, align: "right" });
       x += widths[2];
-      doc.font("Helvetica").fontSize(8.4).fillColor(INK).text("unité", x + 8, y + 8, { width: widths[3] - 16 });
+      doc.font("Helvetica").fontSize(8.4).fillColor(INK).text(article.unite || "Unité non précisée", x + 8, y + 8, { width: widths[3] - 16 });
       y += rowHeight;
     };
 
