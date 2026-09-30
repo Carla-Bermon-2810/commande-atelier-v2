@@ -20,6 +20,10 @@ export type CommandeSuiviResume = {
   quantiteCommandee: number;
   quantiteRecue: number;
   progression: number;
+  /** Chaîne de recherche dérivée des snapshots, jamais affichée telle quelle. */
+  termesRecherche: string;
+  statutEntreeStock: "À confirmer" | "Ajoutée au Stock" | "Sans entrée Stock";
+  aTraiter: boolean;
 };
 
 type CommandeRow = {
@@ -186,20 +190,20 @@ export async function getCommandesSuivi(): Promise<CommandeSuiviResume[]> {
   const commandeIds = commandes.map((commande) => commande.id);
   const { data: lignes, error: lignesError } = await supabase
     .from("commande_articles")
-    .select("id, commande_id, quantite")
+    .select("id, commande_id, quantite, article, designation_snapshot, variante_snapshot, stock_reference_snapshot")
     .in("commande_id", commandeIds)
-    .returns<Array<{ id: string; commande_id: string; quantite: number }>>();
+    .returns<Array<{ id: string; commande_id: string; quantite: number; article: string; designation_snapshot: string | null; variante_snapshot: string | null; stock_reference_snapshot: unknown }>>();
 
   if (lignesError) throw lignesError;
 
   const ligneIds = (lignes ?? []).map((ligne) => ligne.id);
   const { data: receptions, error: receptionsError } = ligneIds.length === 0
-    ? { data: [] as Array<{ commande_article_id: string; quantite_recue: number }>, error: null }
+    ? { data: [] as Array<{ id: string; commande_article_id: string; quantite_recue: number }>, error: null }
     : await supabase
       .from("commande_reception_lignes")
-      .select("commande_article_id, quantite_recue")
+      .select("id, commande_article_id, quantite_recue")
       .in("commande_article_id", ligneIds)
-      .returns<Array<{ commande_article_id: string; quantite_recue: number }>>();
+      .returns<Array<{ id: string; commande_article_id: string; quantite_recue: number }>>();
 
   if (receptionsError) throw receptionsError;
 
@@ -221,17 +225,58 @@ export async function getCommandesSuivi(): Promise<CommandeSuiviResume[]> {
     lignesParCommande.set(ligne.commande_id, lignesCommande);
   }
 
+  const receptionLineIds = (receptions ?? []).map((ligne) => ligne.id);
+  const { data: operations, error: operationsError } = receptionLineIds.length === 0
+    ? { data: [] as Array<{ commande_reception_ligne_id: string; statut: string }>, error: null }
+    : await supabase
+      .from("reception_stock_operations")
+      .select("commande_reception_ligne_id, statut")
+      .in("commande_reception_ligne_id", receptionLineIds)
+      .returns<Array<{ commande_reception_ligne_id: string; statut: string }>>();
+
+  if (operationsError) throw operationsError;
+
+  const commandeParLigneReception = new Map((receptions ?? []).map((ligne) => {
+    const ligneCommande = (lignes ?? []).find((item) => item.id === ligne.commande_article_id);
+    return [ligne.id, ligneCommande?.commande_id] as const;
+  }));
+  const operationsParCommande = new Map<string, string[]>();
+  for (const operation of operations ?? []) {
+    const commandeId = commandeParLigneReception.get(operation.commande_reception_ligne_id);
+    if (!commandeId) continue;
+    const statuts = operationsParCommande.get(commandeId) ?? [];
+    statuts.push(operation.statut);
+    operationsParCommande.set(commandeId, statuts);
+  }
+
   return commandes.map((commande) => {
     const lignesCommande = lignesParCommande.get(commande.id) ?? [];
     const progression = calculerProgressionReception(lignesCommande);
+    const statutsOperations = operationsParCommande.get(commande.id) ?? [];
+    const statutCommande = calculerStatutCommande(lignesCommande, Boolean(commande.annulee_le));
+    const statutEntreeStock = statutsOperations.includes("prete_a_confirmer")
+      ? "À confirmer"
+      : statutsOperations.includes("appliquee")
+        ? "Ajoutée au Stock"
+        : "Sans entrée Stock";
+    const termesRecherche = (lignes ?? [])
+      .filter((ligne) => ligne.commande_id === commande.id)
+      .map((ligne) => {
+        const snapshot = ligne.stock_reference_snapshot as { referenceKey?: unknown } | null;
+        return [ligne.article, ligne.designation_snapshot, ligne.variante_snapshot, typeof snapshot?.referenceKey === "string" ? snapshot.referenceKey : ""].filter(Boolean).join(" ");
+      })
+      .join(" ");
     return {
       id: commande.id,
       numero: commande.numero,
       demandeur: commande.demandeur,
       dateCommande: commande.date_commande,
-      statut: calculerStatutCommande(lignesCommande, Boolean(commande.annulee_le)),
+      statut: statutCommande,
       nombreReferences: lignesCommande.length,
       ...progression,
+      termesRecherche,
+      statutEntreeStock,
+      aTraiter: statutCommande === "En attente" || statutCommande === "Partiellement livrée" || statutEntreeStock === "À confirmer",
     };
   });
 }

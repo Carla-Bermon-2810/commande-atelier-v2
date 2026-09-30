@@ -16,6 +16,7 @@ import {
   PackageCheck,
   PackagePlus,
   Search,
+  Archive,
   UserRound,
 } from "lucide-react";
 import type { CommandeSuivi, StatutCommandeSuivi } from "@/lib/commande-suivi";
@@ -23,6 +24,8 @@ import type { CommandeSuiviResume } from "@/lib/commande-receptions-server";
 
 type Feedback = { type: "error" | "success"; message: string } | null;
 type FiltreStatut = "Toutes" | StatutCommandeSuivi;
+type VueCommandes = "a-traiter" | "historique";
+type FiltreEntreeStock = "Toutes" | "À confirmer" | "Ajoutée au Stock" | "Sans entrée Stock";
 export type CommandesSuiviPreview = {
   commandes: CommandeSuivi[];
   selectedId?: string;
@@ -72,6 +75,9 @@ function resumeCommande(commande: CommandeSuivi): CommandeSuiviResume {
     quantiteCommandee: commande.quantiteCommandee,
     quantiteRecue: commande.quantiteRecue,
     progression: commande.progression,
+    termesRecherche: commande.lignes.map((ligne) => [ligne.article, ligne.variante, ligne.stockReferenceSnapshot?.referenceKey].filter(Boolean).join(" ")).join(" "),
+    statutEntreeStock: commande.operationsStock.some((operation) => operation.statut === "prete_a_confirmer") ? "À confirmer" : commande.operationsStock.some((operation) => operation.statut === "appliquee") ? "Ajoutée au Stock" : "Sans entrée Stock",
+    aTraiter: commande.statut === "En attente" || commande.statut === "Partiellement livrée" || commande.operationsStock.some((operation) => operation.statut === "prete_a_confirmer"),
   };
 }
 
@@ -84,10 +90,12 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState<FiltreStatut>("Toutes");
+  const [vue, setVue] = useState<VueCommandes>("a-traiter");
+  const [statutEntreeStock, setStatutEntreeStock] = useState<FiltreEntreeStock>("Toutes");
   const [demandeur, setDemandeur] = useState("Toutes les personnes");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
-  const [tab, setTab] = useState<"articles" | "informations" | "historique">("articles");
+  const [tab, setTab] = useState<"articles" | "receptions" | "stock">("articles");
   const [quantites, setQuantites] = useState<Record<string, number>>({});
   const [commentaireReception, setCommentaireReception] = useState("");
   const [enregistrePar, setEnregistrePar] = useState("");
@@ -172,14 +180,31 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
       .filter((item) => demandeur === "Toutes les personnes" || item.demandeur === demandeur)
       .filter((item) => !dateDebut || dateKey(item.dateCommande) >= dateDebut)
       .filter((item) => !dateFin || dateKey(item.dateCommande) <= dateFin)
-      .filter((item) => !query || `${item.numero} ${item.demandeur}`.toLocaleLowerCase("fr").includes(query))
-      .sort((a, b) => statusRank(a.statut) - statusRank(b.statut) || new Date(b.dateCommande).getTime() - new Date(a.dateCommande).getTime());
-  }, [commandes, dateDebut, dateFin, demandeur, search, statut]);
+      .filter((item) => vue === "historique" || item.aTraiter)
+      .filter((item) => statutEntreeStock === "Toutes" || item.statutEntreeStock === statutEntreeStock)
+      .filter((item) => !query || `${item.numero} ${item.demandeur} ${item.termesRecherche}`.toLocaleLowerCase("fr").includes(query))
+      .sort((a, b) => vue === "historique"
+        ? new Date(b.dateCommande).getTime() - new Date(a.dateCommande).getTime()
+        : statusRank(a.statut) - statusRank(b.statut) || new Date(b.dateCommande).getTime() - new Date(a.dateCommande).getTime());
+  }, [commandes, dateDebut, dateFin, demandeur, search, statut, statutEntreeStock, vue]);
 
   const compteStatut = (value: FiltreStatut) => value === "Toutes" ? commandes.length : commandes.filter((item) => item.statut === value).length;
   const totalSaisi = commande?.lignes.reduce((total, ligne) => total + (quantites[ligne.id] ?? 0), 0) ?? 0;
   const lignesReceptionnables = commande?.lignes.filter((ligne) => ligne.quantiteRestante > 0) ?? [];
   const articlesReceptionnes = commande?.lignes.filter((ligne) => ligne.quantiteRestante === 0).length ?? 0;
+  const historiqueReceptions = useMemo(() => {
+    if (!commande) return [];
+    const recu = new Map<string, number>();
+    return [...commande.receptions].sort((a, b) => new Date(a.dateReception).getTime() - new Date(b.dateReception).getTime()).map((reception) => ({
+      ...reception,
+      lignes: reception.lignes.map((ligne) => {
+        const article = commande.lignes.find((item) => item.id === ligne.commandeArticleId);
+        const apres = (recu.get(ligne.commandeArticleId) ?? 0) + ligne.quantiteRecue;
+        recu.set(ligne.commandeArticleId, apres);
+        return { ...ligne, article, reste: Math.max(0, (article?.quantiteCommandee ?? 0) - apres) };
+      }),
+    }));
+  }, [commande]);
 
   function setQuantite(ligneId: string, valeur: number, maximum: number) {
     setQuantites((current) => ({ ...current, [ligneId]: Math.max(0, Math.min(maximum, Number.isFinite(valeur) ? Math.trunc(valeur) : 0)) }));
@@ -298,12 +323,17 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] pb-3">
+    <div data-commandes-mode={vue} className="mx-auto max-w-[1400px] pb-3">
       <section className="relative overflow-hidden rounded-2xl bg-[#142026] px-5 py-6 text-white shadow-sm sm:px-8 sm:py-7" style={{ backgroundImage: "linear-gradient(90deg, rgba(10,20,26,.96), rgba(10,20,26,.70), rgba(10,20,26,.36)), url('/category-outils-coupe-v1.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8d5c]">Commande atelier</p>
         <h2 className="mt-2 !text-white text-3xl font-black sm:text-4xl">Suivi des commandes</h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-100 sm:text-base">Consultez les demandes, enregistrez les réceptions et suivez les reliquats à commander.</p>
       </section>
+
+      <div className="mt-5 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Vue des commandes">
+        <button type="button" role="tab" aria-selected={vue === "a-traiter"} onClick={() => setVue("a-traiter")} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition ${vue === "a-traiter" ? "bg-[#F95516] text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}><ClipboardCheck size={17} /> À traiter <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${vue === "a-traiter" ? "bg-white/20" : "bg-slate-100"}`}>{commandes.filter((item) => item.aTraiter).length}</span></button>
+        <button type="button" role="tab" aria-selected={vue === "historique"} onClick={() => setVue("historique")} className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition ${vue === "historique" ? "bg-[#142026] text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}><Archive size={17} /> Historique <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${vue === "historique" ? "bg-white/15" : "bg-slate-100"}`}>{commandes.length}</span></button>
+      </div>
 
       <div className="mt-5 overflow-x-auto border-b border-slate-200">
         <div className="flex min-w-max gap-1" role="tablist" aria-label="Filtrer les commandes par statut">
@@ -314,8 +344,9 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
       <div className="mt-5 grid gap-5 xl:grid-cols-[26rem_minmax(0,1fr)]">
         <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm xl:sticky xl:top-[6.1rem] xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto">
           <div className="grid grid-cols-2 gap-2">
-            <label className="relative col-span-2 block"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher une commande…" className="min-h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-[#F95516] focus:ring-2 focus:ring-orange-100" /></label>
+            <label className="relative col-span-2 block"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="N°, référence, désignation, variante…" className="min-h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-[#F95516] focus:ring-2 focus:ring-orange-100" /></label>
             <select value={demandeur} onChange={(event) => setDemandeur(event.target.value)} className="col-span-2 min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#F95516]"><option>Toutes les personnes</option>{demandeurs.map((item) => <option key={item}>{item}</option>)}</select>
+            <select value={statutEntreeStock} onChange={(event) => setStatutEntreeStock(event.target.value as FiltreEntreeStock)} className="col-span-2 min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#F95516]"><option>Toutes les entrées Stock</option><option>À confirmer</option><option>Ajoutée au Stock</option><option>Sans entrée Stock</option></select>
             <label className="text-xs font-medium text-slate-500">Du<input type="date" value={dateDebut} onChange={(event) => setDateDebut(event.target.value)} className="mt-1 min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-[#F95516]" /></label>
             <label className="text-xs font-medium text-slate-500">Au<input type="date" value={dateFin} onChange={(event) => setDateFin(event.target.value)} className="mt-1 min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-[#F95516]" /></label>
           </div>
@@ -342,9 +373,9 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
               <a href={`/api/commandes/${commande.id}/pdf`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50"><FileText size={18} /> PDF</a>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 sm:px-6">
               <div className="flex" role="tablist">
-                {(["articles", "informations", "historique"] as const).map((value) => (
+                {(["articles", "receptions", "stock"] as const).map((value) => (
                   <button
                     key={value}
                     type="button"
@@ -353,8 +384,8 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
                     onClick={() => setTab(value)}
                     className={`border-b-2 px-3 py-4 text-sm font-bold ${tab === value ? "border-[#F95516] text-[#F95516]" : "border-transparent text-slate-500"}`}
                   >
-                    {value === "historique" && <History className="mr-1 inline" size={15} />}
-                    {value === "articles" ? "Articles" : value === "informations" ? "Informations" : "Historique"}
+                    {value === "receptions" && <History className="mr-1 inline" size={15} />}
+                    {value === "articles" ? "Articles" : value === "receptions" ? "Réceptions" : "Stock"}
                   </button>
                 ))}
               </div>
@@ -367,18 +398,34 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
 
             {feedback && <div role="status" className={`mx-5 mt-5 rounded-xl border px-4 py-3 text-sm font-medium sm:mx-6 ${feedback.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{feedback.message}</div>}
 
+            {tab === "articles" && vue === "historique" && <style>{`
+              [data-commandes-mode="historique"] table :is(th:nth-child(1), td:nth-child(1), th:nth-child(5), td:nth-child(5)) { display: none; }
+              [data-commandes-mode="historique"] table { min-width: 640px; }
+              [data-commandes-mode="historique"] table th:last-child,
+              [data-commandes-mode="historique"] table td:last-child { min-width: 9.5rem; white-space: nowrap; }
+            `}</style>}
+
             {tab === "articles" && <div className="overflow-x-auto"><table className="min-w-[860px] w-full text-left"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="w-12 px-4 py-4"></th><th className="px-3 py-4">Article</th><th className="px-3 py-4 text-center">Commandé</th><th className="px-3 py-4 text-center">Déjà reçu</th><th className="px-3 py-4 text-center">Reçu maintenant</th><th className="px-3 py-4 text-center">Reste</th><th className="px-3 py-4">Statut</th></tr></thead><tbody>{commande.lignes.map((ligne) => {
               const maintenant = quantites[ligne.id] ?? 0;
               const terminee = ligne.quantiteRestante === 0;
               const partiellementRecue = !terminee && ligne.quantiteRecue > 0;
               const resteApres = ligne.quantiteRestante - maintenant;
               const photo = getArticlePhotoUrl(ligne.photo);
-              return <tr key={ligne.id} className={`border-b border-slate-100 transition-colors ${terminee ? "bg-emerald-50/70" : partiellementRecue ? "bg-orange-50/70" : "bg-white"}`}><td className="px-4 py-4"><input type="checkbox" checked={terminee || (ligne.quantiteRestante > 0 && maintenant === ligne.quantiteRestante)} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, event.target.checked ? ligne.quantiteRestante : 0, ligne.quantiteRestante)} className="h-5 w-5 rounded border-slate-300 text-[#F95516] focus:ring-[#F95516] disabled:opacity-70" aria-label={`Réceptionner entièrement ${ligne.article}`} /></td><td className="px-3 py-4"><div className="flex items-center gap-3"><div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white"><ImageOff size={18} className="absolute text-slate-300" />{photo && <img src={photo} alt="" className="relative h-full w-full object-contain bg-white p-1" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />}</div><div><p className={`font-bold ${terminee ? "text-emerald-900" : "text-slate-900"}`}>{ligne.article}</p>{ligne.variante && <p className="mt-1 text-xs text-slate-500">{ligne.variante}</p>}{ligne.famille && <p className="mt-1 text-xs text-slate-500">{ligne.famille}</p>}</div></div></td><td className="px-3 py-4 text-center font-bold text-slate-800">{ligne.quantiteCommandee}</td><td className="px-3 py-4 text-center font-bold text-slate-700">{ligne.quantiteRecue}</td><td className="px-3 py-4 text-center"><input type="number" min={0} max={ligne.quantiteRestante} value={maintenant} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, Number(event.target.value), ligne.quantiteRestante)} className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-2 text-center font-bold outline-none focus:border-[#F95516] disabled:cursor-not-allowed disabled:border-emerald-100 disabled:bg-emerald-100/60" aria-label={`Quantité reçue maintenant pour ${ligne.article}`} /></td><td className="px-3 py-4 text-center font-black text-slate-800">{resteApres}</td><td className="px-3 py-4">{terminee ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800"><CheckCircle2 size={14} /> Réceptionnée</span> : maintenant > 0 ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">À enregistrer</span> : partiellementRecue ? <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800">Partiellement reçue</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">En attente</span>}</td></tr>;
+              return <tr key={ligne.id} className={`border-b border-slate-100 transition-colors ${terminee ? "bg-emerald-50/70" : partiellementRecue ? "bg-orange-50/70" : "bg-white"}`}>
+                <td className="px-4 py-4"><input type="checkbox" checked={terminee || (ligne.quantiteRestante > 0 && maintenant === ligne.quantiteRestante)} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, event.target.checked ? ligne.quantiteRestante : 0, ligne.quantiteRestante)} className="h-5 w-5 rounded border-slate-300 text-[#F95516] focus:ring-[#F95516] disabled:opacity-70" aria-label={`Réceptionner entièrement ${ligne.article}`} /></td>
+                <td className="px-3 py-4"><div className="flex items-center gap-3"><div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white"><ImageOff size={18} className="absolute text-slate-300" />{photo && <img src={photo} alt="" className="relative h-full w-full object-contain bg-white p-1" onError={(event) => { event.currentTarget.style.opacity = "0"; }} />}</div><div><p className={`font-bold ${terminee ? "text-emerald-900" : "text-slate-900"}`}>{ligne.article}</p>{ligne.variante && <p className="mt-1 text-xs text-slate-500">{ligne.variante}</p>}{ligne.unite && <p className="mt-1 text-xs font-medium text-slate-500">Conditionnement : {ligne.unite}</p>}{ligne.famille && <p className="mt-1 text-xs text-slate-500">{ligne.famille}</p>}</div></div></td>
+                <td className="px-3 py-4 text-center font-bold text-slate-800">{ligne.quantiteCommandee}</td>
+                <td className="px-3 py-4 text-center font-bold text-slate-700">{ligne.quantiteRecue}</td>
+                <td className="px-3 py-4 text-center"><input type="number" min={0} max={ligne.quantiteRestante} value={maintenant} disabled={terminee || commande.estAnnulee} onChange={(event) => setQuantite(ligne.id, Number(event.target.value), ligne.quantiteRestante)} className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-2 text-center font-bold outline-none focus:border-[#F95516] disabled:cursor-not-allowed disabled:border-emerald-100 disabled:bg-emerald-100/60" aria-label={`Quantité reçue maintenant pour ${ligne.article}`} /></td>
+                <td className="px-3 py-4 text-center font-black text-slate-800">{resteApres}</td>
+                <td className="px-3 py-4"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${terminee ? "bg-emerald-100 text-emerald-800" : maintenant > 0 ? "bg-blue-50 text-blue-800" : partiellementRecue ? "bg-orange-100 text-orange-800" : "bg-amber-50 text-amber-800"}`}>{terminee ? <><CheckCircle2 size={14} className="mr-1" /> Réceptionnée</> : maintenant > 0 ? "À enregistrer" : partiellementRecue ? "Partiellement reçue" : "En attente"}</span></td>
+              </tr>;
             })}</tbody></table></div>}
+            {tab === "articles" && commande.commentaire && <div className="mx-5 mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:mx-6"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Commentaire de la commande</p><p className="mt-1 text-sm text-slate-700">{commande.commentaire}</p></div>}
 
-            {tab === "articles" && commande.operationsStock.length > 0 && <section className="border-t border-slate-200 bg-slate-50/70 px-5 py-5 sm:px-6" aria-label="Suivi des entrées en Stock">
+            {tab === "stock" && <section className="px-5 py-5 sm:px-6" aria-label="Suivi des entrées en Stock">
               <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="flex items-center gap-2 font-black text-slate-900"><PackagePlus size={19} className="text-[#F95516]" /> Suivi des entrées en Stock</h4><p className="mt-1 text-xs leading-5 text-slate-500">Une réception reste séparée du Stock tant que vous ne la confirmez pas ici.</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{commande.operationsStock.filter((item) => item.statut === "prete_a_confirmer").length} à confirmer</span></div>
-              <div className="mt-4 space-y-3">{commande.operationsStock.map((operation) => {
+              {commande.operationsStock.length === 0 ? <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-7 text-center text-sm text-slate-500">Aucune entrée Stock n’est associée aux réceptions de cette commande.</div> : <div className="mt-4 space-y-3">{commande.operationsStock.map((operation) => {
                 const isLength = operation.uniteStock === "mm";
                 const lengths = isLength ? longueursPour(operation.id, operation.quantiteRecue) : [];
                 const totalLengths = lengths.reduce((total, value) => total + (Number(value) > 0 ? Number(value) : 0), 0);
@@ -387,14 +434,13 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
                 return <article key={operation.id} className={`rounded-2xl border p-4 ${operation.statut === "appliquee" ? "border-emerald-200 bg-emerald-50/60" : operation.statut === "prete_a_confirmer" ? "border-orange-200 bg-white" : "border-slate-200 bg-white"}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold text-slate-900">{operation.article}</p><p className="mt-1 text-xs text-slate-500">Référence Stock : {operation.referenceStock ?? "Non liée"}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${operation.statut === "appliquee" ? "bg-emerald-100 text-emerald-800" : operation.statut === "prete_a_confirmer" ? "bg-orange-100 text-[#c2410c]" : "bg-slate-100 text-slate-600"}`}>{operation.statut === "appliquee" ? "Ajoutée au Stock" : operation.statut === "prete_a_confirmer" ? "À confirmer" : "Aucune entrée proposée"}</span></div>
                   {operation.statut === "prete_a_confirmer" && operation.previsualisation.disponible ? <><div className="mt-3 grid gap-2 text-sm sm:grid-cols-4"><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Reçu</p><p className="mt-1 font-bold text-slate-900">{operation.quantiteRecue} {operation.uniteCommande === "boite" ? "boîte(s)" : operation.uniteCommande === "barre" ? "morceau(x)" : "pièce(s)"}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Ajout proposé</p><p className="mt-1 font-bold text-slate-900">{isLength ? (totalLengths ? `${totalLengths.toLocaleString("fr-FR")} mm` : "Longueurs à saisir") : `${(operation.quantiteAAjouter ?? 0).toLocaleString("fr-FR")} pièces`}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Stock actuel</p><p className="mt-1 font-bold text-slate-900">{operation.previsualisation.stockActuel?.toLocaleString("fr-FR")} {operation.previsualisation.unite}</p></div><div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Après confirmation</p><p className="mt-1 font-bold text-emerald-900">{previewAfter === null ? "À calculer" : `${previewAfter.toLocaleString("fr-FR")} ${operation.previsualisation.unite}`}</p></div></div>
                   {isLength && <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50/50 p-3"><p className="text-sm font-bold text-slate-800">Longueur réellement reçue par morceau</p><div className="mt-2 grid gap-2 sm:grid-cols-2">{lengths.map((value, index) => <label key={index} className="text-xs font-medium text-slate-600">Morceau {index + 1}<input value={value} onChange={(event) => modifierLongueur(operation.id, index, event.target.value, operation.quantiteRecue)} type="number" min="1" step="1" placeholder="mm" className="mt-1 block min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-[#F95516]" /></label>)}</div></div>}
-                  <button type="button" disabled={!canApply || operationEnCours !== null} onClick={() => confirmerEntreeStock(operation)} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-sm font-bold text-white transition hover:bg-[#e84a0e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Check size={17} />{operationEnCours === operation.id ? "Confirmation…" : "Confirmer l’entrée en Stock"}</button></> : <p className="mt-3 text-sm text-slate-600">{operation.statut === "appliquee" ? <>Ajoutée au Stock : <strong>{(operation.quantiteAAjouter ?? 0).toLocaleString("fr-FR")} {operation.uniteStock}</strong>{operation.appliqueeLe ? <> · le {formatDate(operation.appliqueeLe)}</> : null}. Cette réception reste tracée et ne peut pas être ajoutée une seconde fois.</> : operation.raison || operation.previsualisation.message || "Cette ligne reste réceptionnée sans modifier le Stock."}</p>}</article>;
-              })}</div>
+                  {vue === "a-traiter" ? <button type="button" disabled={!canApply || operationEnCours !== null} onClick={() => confirmerEntreeStock(operation)} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F95516] px-4 text-sm font-bold text-white transition hover:bg-[#e84a0e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Check size={17} />{operationEnCours === operation.id ? "Confirmation…" : "Confirmer l’entrée en Stock"}</button> : <p className="mt-3 text-sm text-orange-700">Entrée en attente de confirmation dans la vue « À traiter ».</p>}</> : <p className="mt-3 text-sm text-slate-600">{operation.statut === "appliquee" ? <>Ajoutée au Stock : <strong>{(operation.quantiteAAjouter ?? 0).toLocaleString("fr-FR")} {operation.uniteStock}</strong>{operation.appliqueeLe ? <> · le {formatDate(operation.appliqueeLe)}</> : null}. Cette réception reste tracée et ne peut pas être ajoutée une seconde fois.</> : operation.raison || operation.previsualisation.message || "Cette ligne reste réceptionnée sans modifier le Stock."}</p>}</article>;
+              })}</div>}
             </section>}
 
-            {tab === "informations" && <div className="p-6"><h4 className="font-bold text-slate-900">Commentaire de la commande</h4><p className="mt-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{commande.commentaire || "Aucun commentaire ajouté à cette commande."}</p></div>}
-            {tab === "historique" && <div className="p-5 sm:p-6">{commande.receptions.length === 0 ? <div className="rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">Aucune réception n’a encore été enregistrée.</div> : <ol className="space-y-3">{commande.receptions.map((reception) => <li key={reception.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-slate-900">Réception du {formatDateLong(reception.dateReception)}</p>{reception.enregistrePar && <p className="text-sm text-slate-500">Saisie par {reception.enregistrePar}</p>}</div><ul className="mt-3 space-y-1 text-sm text-slate-600">{reception.lignes.map((ligne) => { const article = commande.lignes.find((item) => item.id === ligne.commandeArticleId); return <li key={ligne.id}>+ {ligne.quantiteRecue} — {article?.article ?? "Article"}</li>; })}</ul>{reception.commentaire && <p className="mt-3 border-t border-slate-100 pt-3 text-sm italic text-slate-600">{reception.commentaire}</p>}</li>)}</ol>}</div>}
+            {tab === "receptions" && <div className="p-5 sm:p-6">{historiqueReceptions.length === 0 ? <div className="rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">Aucune réception n’a encore été enregistrée.</div> : <ol className="space-y-3">{historiqueReceptions.map((reception, index) => <li key={reception.id} className="rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-slate-900">Réception {index + 1} · {formatDateLong(reception.dateReception)}</p>{reception.enregistrePar && <p className="text-sm text-slate-500">Réceptionnée par {reception.enregistrePar}</p>}</div><ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-100 text-sm">{reception.lignes.map((ligne) => <li key={ligne.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"><span className="font-medium text-slate-800">{ligne.article?.article ?? "Article"}{ligne.article?.variante ? <span className="ml-1 text-xs font-normal text-slate-500">· {ligne.article.variante}</span> : null}</span><span className="text-slate-600"><strong className="text-slate-900">+ {ligne.quantiteRecue}</strong> reçu · reste {ligne.reste}</span></li>)}</ul>{reception.commentaire && <p className="mt-3 border-t border-slate-100 pt-3 text-sm italic text-slate-600">{reception.commentaire}</p>}</li>)}</ol>}</div>}
 
-            {tab === "articles" && <div className="border-t-4 border-t-[#F95516] bg-[#fffaf7] p-5 shadow-[0_-10px_24px_rgba(15,23,42,.035)] sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 font-bold text-slate-900"><PackageCheck size={20} className="text-[#F95516]" /> Validation de la réception</div><p className="mt-1 text-xs text-slate-500">Saisissez uniquement les quantités arrivées aujourd’hui.</p></div><button type="button" onClick={receptionnerTout} disabled={!lignesReceptionnables.length || commande.estAnnulee || saving} className="min-h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60">Réceptionner tous les articles</button></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_13rem]"><textarea value={commentaireReception} onChange={(event) => setCommentaireReception(event.target.value)} maxLength={1000} placeholder="Ajouter un commentaire de réception (facultatif)…" className="min-h-24 rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100" /><input value={enregistrePar} onChange={(event) => setEnregistrePar(event.target.value)} maxLength={100} placeholder="Saisi par (facultatif)" className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#F95516]" /></div><button type="button" onClick={enregistrerReception} disabled={!totalSaisi || commande.estAnnulee || saving} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#F95516] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#e84a0e] disabled:cursor-not-allowed disabled:border disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"><Check size={19} />{saving ? "Enregistrement…" : `Enregistrer la réception${totalSaisi ? ` (${totalSaisi})` : ""}`}</button>{commande.estAnnulee && <p className="mt-3 text-sm font-medium text-rose-700">Cette commande est annulée : aucune réception ne peut être ajoutée.</p>}</div>}
+            {tab === "articles" && vue === "a-traiter" && <div className="border-t-4 border-t-[#F95516] bg-[#fffaf7] p-5 shadow-[0_-10px_24px_rgba(15,23,42,.035)] sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 font-bold text-slate-900"><PackageCheck size={20} className="text-[#F95516]" /> Validation de la réception</div><p className="mt-1 text-xs text-slate-500">Saisissez uniquement les quantités arrivées aujourd’hui.</p></div><button type="button" onClick={receptionnerTout} disabled={!lignesReceptionnables.length || commande.estAnnulee || saving} className="min-h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60">Réceptionner tous les articles</button></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_13rem]"><textarea value={commentaireReception} onChange={(event) => setCommentaireReception(event.target.value)} maxLength={1000} placeholder="Ajouter un commentaire de réception (facultatif)…" className="min-h-24 rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-[#F95516] focus:ring-2 focus:ring-orange-100" /><input value={enregistrePar} onChange={(event) => setEnregistrePar(event.target.value)} maxLength={100} placeholder="Saisi par (facultatif)" className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#F95516]" /></div><button type="button" onClick={enregistrerReception} disabled={!totalSaisi || commande.estAnnulee || saving} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#F95516] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#e84a0e] disabled:cursor-not-allowed disabled:border disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"><Check size={19} />{saving ? "Enregistrement…" : `Enregistrer la réception${totalSaisi ? ` (${totalSaisi})` : ""}`}</button>{commande.estAnnulee && <p className="mt-3 text-sm font-medium text-rose-700">Cette commande est annulée : aucune réception ne peut être ajoutée.</p>}</div>}
           </>}
         </section>
       </div>
