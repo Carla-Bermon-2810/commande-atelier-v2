@@ -14,6 +14,8 @@ export type StockAlertView = StockAlertReference & {
 };
 
 export type StockAlertsPayload = {
+  /** Toutes les références suivies, y compris celles dont le seuil est à renseigner. */
+  references: StockAlertView[];
   alertes: StockAlertView[];
   global: StockAlertGroup;
   indicateurs: {
@@ -21,9 +23,11 @@ export type StockAlertsPayload = {
     alertes: number;
     ruptures: number;
     seuilsNonDefinis: number;
+    referencesAInitialiser?: number;
   };
   parCategorie: Record<string, StockAlertGroup>;
   parFamille: Record<string, StockAlertGroup>;
+  referencesCatalogueParType?: Record<"abrasifs" | "soudure" | "epi" | "consommables", number>;
 };
 
 export function notifyStockAlertsUpdated() {

@@ -16,8 +16,8 @@ type OrderArticle = {
     source: string;
     referenceId?: number;
     referenceKey?: string;
-    uniteCommande: "piece" | "boite" | "barre";
-    uniteStock: "pieces" | "mm";
+    uniteCommande: "piece" | "boite" | "barre" | "unite";
+    uniteStock: "pieces" | "mm" | "unites";
     facteurConversion: number;
     longueurParBarreMm?: number;
     configuration?: Record<string, string | number | null>;
@@ -30,8 +30,8 @@ type CatalogueStockLinkRow = {
   stock_type: string;
   stock_reference_id: number | null;
   stock_reference_key: string | null;
-  unite_commande: "piece" | "boite" | "tube" | "tige";
-  unite_stock: "pieces" | "mm";
+  unite_commande: "piece" | "boite" | "tube" | "tige" | "unite";
+  unite_stock: "pieces" | "mm" | "unites";
   facteur_conversion: number | string;
   actif: boolean;
   configuration: Record<string, string | number | null> | null;
@@ -89,7 +89,7 @@ function parseOrder(payload: unknown): OrderPayload | null {
       ? stockInput as Record<string, unknown>
       : undefined;
     const stockSource = stockReference?.source;
-    const validStockSource = typeof stockSource === "string" && ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"].includes(stockSource);
+    const validStockSource = typeof stockSource === "string" && ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds", "abrasifs", "soudure", "epi", "consommables"].includes(stockSource);
     const referenceId = Number(stockReference?.referenceId);
     const referenceKey = typeof stockReference?.referenceKey === "string" ? stockReference.referenceKey.trim().slice(0, 300) : undefined;
     const uniteCommande = stockReference?.uniteCommande;
@@ -104,7 +104,7 @@ function parseOrder(payload: unknown): OrderPayload | null {
       !nom ||
       !Number.isInteger(quantite) || quantite < 1 || quantite > 10_000 ||
       (article.catalogueId !== undefined && (!Number.isSafeInteger(catalogueId) || catalogueId < 1))
-      || (stockReference !== undefined && (!validStockSource || (!Number.isSafeInteger(referenceId) && !referenceKey) || !["piece", "boite", "barre"].includes(String(uniteCommande)) || !["pieces", "mm"].includes(String(uniteStock)) || !Number.isFinite(facteurConversion) || facteurConversion <= 0 || (stockReference.longueurParBarreMm !== undefined && (!Number.isFinite(longueurParBarreMm) || longueurParBarreMm <= 0))))
+      || (stockReference !== undefined && (!validStockSource || (!Number.isSafeInteger(referenceId) && !referenceKey) || !["piece", "boite", "barre", "unite"].includes(String(uniteCommande)) || !["pieces", "mm", "unites"].includes(String(uniteStock)) || !Number.isFinite(facteurConversion) || facteurConversion <= 0 || (stockReference.longueurParBarreMm !== undefined && (!Number.isFinite(longueurParBarreMm) || longueurParBarreMm <= 0))))
     ) {
       return null;
     }
@@ -121,8 +121,8 @@ function parseOrder(payload: unknown): OrderPayload | null {
         source: stockSource as string,
         referenceId: Number.isSafeInteger(referenceId) ? referenceId : undefined,
         referenceKey,
-        uniteCommande: uniteCommande as "piece" | "boite" | "barre",
-        uniteStock: uniteStock as "pieces" | "mm",
+        uniteCommande: uniteCommande as "piece" | "boite" | "barre" | "unite",
+        uniteStock: uniteStock as "pieces" | "mm" | "unites",
         facteurConversion,
         longueurParBarreMm: Number.isFinite(longueurParBarreMm) ? longueurParBarreMm : undefined,
         configuration,
@@ -149,13 +149,18 @@ function libelleUnite(snapshot: NonNullable<OrderArticle["stockReference"]>) {
   if (snapshot.uniteCommande === "boite") {
     return `Boîte de ${formatNumber(snapshot.facteurConversion)} pièce${snapshot.facteurConversion > 1 ? "s" : ""}`;
   }
+  if (snapshot.uniteCommande === "unite") {
+    const configuration = snapshot.configuration ?? {};
+    const label = configuration.conditionnementLabel ?? configuration.conditionnement_label ?? configuration.uniteLibelle ?? configuration.unite_libelle;
+    return typeof label === "string" && label.trim() ? label.trim() : "Unité";
+  }
   return "Pièce";
 }
 
 function snapshotDepuisLiaison(liaison: CatalogueStockLinkRow): NonNullable<OrderArticle["stockReference"]> | null {
   const facteurConversion = Number(liaison.facteur_conversion);
   const source = liaison.stock_type;
-  const isValidSource = ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"].includes(source);
+  const isValidSource = ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds", "abrasifs", "soudure", "epi", "consommables"].includes(source);
   if (!liaison.actif || !isValidSource || !Number.isFinite(facteurConversion) || facteurConversion <= 0) return null;
   if (!Number.isSafeInteger(liaison.stock_reference_id) && !liaison.stock_reference_key) return null;
 
@@ -163,7 +168,7 @@ function snapshotDepuisLiaison(liaison: CatalogueStockLinkRow): NonNullable<Orde
     source,
     referenceId: Number.isSafeInteger(liaison.stock_reference_id) ? liaison.stock_reference_id ?? undefined : undefined,
     referenceKey: liaison.stock_reference_key ?? undefined,
-    uniteCommande: liaison.unite_commande === "boite" ? "boite" : liaison.unite_commande === "piece" ? "piece" : "barre",
+    uniteCommande: liaison.unite_commande === "boite" ? "boite" : liaison.unite_commande === "piece" ? "piece" : liaison.unite_commande === "unite" ? "unite" : "barre",
     uniteStock: liaison.unite_stock,
     facteurConversion,
     configuration: liaison.configuration ?? undefined,

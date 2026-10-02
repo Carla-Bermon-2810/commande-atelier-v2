@@ -8,12 +8,12 @@ type ReceptionLineRow = { id: string; reception_id: string; commande_article_id:
 type CommandLineRow = { id: string; article: string; designation_snapshot: string | null; stock_reference_snapshot: unknown };
 type OperationRow = {
   id: string; commande_reception_ligne_id: string; statut: OperationStockReception["statut"]; stock_type: StockAlertSource | null;
-  stock_reference_id: number | null; stock_reference_key: string | null; unite_commande: string | null; unite_stock: "pieces" | "mm" | null;
+  stock_reference_id: number | null; stock_reference_key: string | null; unite_commande: string | null; unite_stock: "pieces" | "mm" | "unites" | null;
   quantite_recue: number; quantite_a_ajouter: number | string | null; details_reception: unknown; stock_avant: Record<string, unknown> | null;
   stock_apres: Record<string, unknown> | null; appliquee_le: string | null; erreur: string | null;
 };
 
-const SOURCES: StockAlertSource[] = ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"];
+const SOURCES: StockAlertSource[] = ["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds", "abrasifs", "soudure", "epi", "consommables"];
 const LENGTH_SOURCES = new Set<StockAlertSource>(["tubes", "tiges_filetees"]);
 
 function numberOrNull(value: unknown) {
@@ -36,8 +36,8 @@ function parseSnapshot(value: unknown): StockReferenceSnapshot | null {
   if (
     typeof source !== "string" || !SOURCES.includes(source as StockAlertSource) ||
     (!Number.isSafeInteger(referenceId) && !referenceKey) ||
-    !["piece", "boite", "barre"].includes(String(snapshot.uniteCommande)) ||
-    !["pieces", "mm"].includes(String(snapshot.uniteStock)) ||
+    !["piece", "boite", "barre", "unite"].includes(String(snapshot.uniteCommande)) ||
+    !["pieces", "mm", "unites"].includes(String(snapshot.uniteStock)) ||
     !Number.isFinite(facteurConversion) || facteurConversion <= 0
   ) return null;
 
@@ -152,12 +152,22 @@ async function previewOperation(row: OperationRow, configuration: Record<string,
       return { disponible: true, stockActuel: total, stockApres: null, unite: "mm" as const };
     }
     if (!row.stock_reference_id || !row.quantite_a_ajouter) return { disponible: false, message: "Référence Stock ou conversion indisponible.", stockActuel: null, stockApres: null, unite: row.unite_stock };
+    if (["abrasifs", "soudure", "epi", "consommables"].includes(row.stock_type)) {
+      const { data, error } = await supabase.from("stock_articles_catalogue").select("id,quantite_disponible,etat_initialisation").eq("id", row.stock_reference_id).maybeSingle();
+      if (error) throw error;
+      if (!data || data.etat_initialisation !== "initialise" || data.quantite_disponible === null) return { disponible: false, message: "La référence Stock n’est plus initialisée.", stockActuel: null, stockApres: null, unite: "unites" as const };
+      const stock = Number(data.quantite_disponible);
+      const added = Number(row.quantite_a_ajouter);
+      return { disponible: true, stockActuel: stock, stockApres: stock + added, unite: "unites" as const };
+    }
     const tableByType: Record<string, string> = { vis: "stock_vis", ecrous: "stock_ecrous", rivets: "stock_rivets", inserts: "stock_inserts", forets: "stock_forets", fraises: "stock_fraises", tarauds: "stock_tarauds" };
     const table = tableByType[row.stock_type];
     const { data, error } = await supabase.from(table).select("id,boites_pleines,pieces_restantes,pieces_par_boite,quantite").eq("id", row.stock_reference_id).maybeSingle();
     if (error) throw error;
     if (!data) return { disponible: false, message: "La référence Stock n’existe plus.", stockActuel: null, stockApres: null, unite: "pieces" as const };
-    const stock = ["vis", "ecrous", "rivets"].includes(row.stock_type) ? Number(data.boites_pleines ?? 0) * Number(data.pieces_par_boite ?? 0) + Number(data.pieces_restantes ?? 0) : Number(data.quantite ?? 0);
+    const stock = ["vis", "ecrous", "rivets"].includes(row.stock_type)
+      ? Number(data.boites_pleines ?? 0) * Number(data.pieces_par_boite ?? 0) + (row.stock_type === "vis" ? 0 : Number(data.pieces_restantes ?? 0))
+      : Number(data.quantite ?? 0);
     const added = Number(row.quantite_a_ajouter);
     return { disponible: true, stockActuel: stock, stockApres: stock + added, unite: "pieces" as const };
   } catch {
@@ -206,9 +216,14 @@ export async function appliquerOperationStock(args: { commandeId: string; operat
   const operation = operations.find((item) => item.id === args.operationId);
   if (!operation) throw new Error("Cette opération ne correspond pas à la commande sélectionnée.");
   const supabase = getServerSupabase();
-  const { data, error } = await supabase.rpc("appliquer_reception_stock_operation", {
-    p_operation_id: args.operationId, p_longueurs_mm: args.longueursMm, p_appliquee_par: args.appliqueePar?.trim() || null, p_application_idempotency_key: args.idempotencyKey,
-  });
+  const generic = ["abrasifs", "soudure", "epi", "consommables"].includes(operation.stockType ?? "");
+  const { data, error } = generic
+    ? await supabase.rpc("appliquer_reception_stock_article_catalogue_operation", {
+      p_operation_id: args.operationId, p_appliquee_par: args.appliqueePar?.trim() || null, p_application_idempotency_key: args.idempotencyKey,
+    })
+    : await supabase.rpc("appliquer_reception_stock_operation", {
+      p_operation_id: args.operationId, p_longueurs_mm: args.longueursMm, p_appliquee_par: args.appliqueePar?.trim() || null, p_application_idempotency_key: args.idempotencyKey,
+    });
   if (error) throw new Error(error.message);
   return data as { status: "applied" | "already_applied" };
 }

@@ -4,6 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Check,
   CheckCircle2,
@@ -33,6 +34,14 @@ export type CommandesSuiviPreview = {
 };
 
 const STATUTS: FiltreStatut[] = ["Toutes", "En attente", "Partiellement livrée", "Livrée", "Annulée"];
+
+function statutDepuisUrl(value: string | null): FiltreStatut {
+  if (value === "attente") return "En attente";
+  if (value === "partielle") return "Partiellement livrée";
+  if (value === "livree") return "Livrée";
+  if (value === "annulee") return "Annulée";
+  return "Toutes";
+}
 
 const statusStyle: Record<StatutCommandeSuivi, string> = {
   "En attente": "bg-amber-50 text-amber-800 ring-amber-200",
@@ -82,16 +91,17 @@ function resumeCommande(commande: CommandeSuivi): CommandeSuiviResume {
 }
 
 export default function CommandesSuiviClient({ preview }: { preview?: CommandesSuiviPreview }) {
+  const searchParams = useSearchParams();
   const [commandes, setCommandes] = useState<CommandeSuiviResume[]>([]);
   const [commande, setCommande] = useState<CommandeSuivi | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("commande")?.trim() || null);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  const [statut, setStatut] = useState<FiltreStatut>("Toutes");
-  const [vue, setVue] = useState<VueCommandes>("a-traiter");
-  const [statutEntreeStock, setStatutEntreeStock] = useState<FiltreEntreeStock>("Toutes");
+  const [statut, setStatut] = useState<FiltreStatut>(() => statutDepuisUrl(searchParams.get("statut")));
+  const [vue, setVue] = useState<VueCommandes>(() => searchParams.get("vue") === "historique" ? "historique" : "a-traiter");
+  const [statutEntreeStock, setStatutEntreeStock] = useState<FiltreEntreeStock>(() => searchParams.get("stock") === "confirmer" ? "À confirmer" : "Toutes");
   const [demandeur, setDemandeur] = useState("Toutes les personnes");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
@@ -367,7 +377,7 @@ export default function CommandesSuiviClient({ preview }: { preview?: CommandesS
         </aside>
 
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-          {loadingDetail ? <div className="flex min-h-[34rem] items-center justify-center text-slate-500"><Loader2 className="mr-2 animate-spin" size={20} /> Chargement de la commande…</div> : !commande ? <div className="flex min-h-[34rem] flex-col items-center justify-center p-8 text-center"><ClipboardCheck size={44} className="text-slate-300" /><h3 className="mt-4 text-lg font-bold text-slate-800">Sélectionnez une commande</h3><p className="mt-1 max-w-sm text-sm text-slate-500">Son détail, ses reliquats et son historique de réception apparaîtront ici.</p></div> : <>
+          {loadingDetail ? <div className="flex min-h-[34rem] items-center justify-center text-slate-500"><Loader2 className="mr-2 animate-spin" size={20} /> Chargement de la commande…</div> : !commande || !commandesFiltrees.some((item) => item.id === commande.id) ? <div className="flex min-h-[34rem] flex-col items-center justify-center p-8 text-center"><ClipboardCheck size={44} className="text-slate-300" /><h3 className="mt-4 text-lg font-bold text-slate-800">Sélectionnez une commande</h3><p className="mt-1 max-w-sm text-sm text-slate-500">Son détail, ses reliquats et son historique de réception apparaîtront ici.</p></div> : <>
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
               <div><div className="flex flex-wrap items-center gap-3"><h3 className="text-2xl font-black text-[#121820]">{commande.numero}</h3><span className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusStyle[commande.statut]}`}>{commande.statut}</span></div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600"><span>{formatDateLong(commande.dateCommande)}</span><span className="inline-flex items-center gap-1"><UserRound size={15} /> {commande.demandeur}</span><span>{commande.lignes.length} référence{commande.lignes.length > 1 ? "s" : ""}</span></div></div>
               <a href={`/api/commandes/${commande.id}/pdf`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50"><FileText size={18} /> PDF</a>

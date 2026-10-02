@@ -22,11 +22,11 @@ export interface CartItem {
   referenceMetier?: string;
   /** Identité exacte d'une référence ajoutée depuis le Stock. */
   stockReference?: {
-    source: "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts" | "rivets" | "forets" | "fraises" | "tarauds";
+    source: "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts" | "rivets" | "forets" | "fraises" | "tarauds" | "abrasifs" | "soudure" | "epi" | "consommables";
     referenceId?: number;
     referenceKey?: string;
-    uniteCommande: "piece" | "boite" | "barre";
-    uniteStock: "pieces" | "mm";
+    uniteCommande: "piece" | "boite" | "barre" | "unite";
+    uniteStock: "pieces" | "mm" | "unites";
     facteurConversion: number;
     longueurParBarreMm?: number;
     configuration?: Record<string, string | number | null>;
@@ -95,9 +95,9 @@ function isCartItem(value: unknown): value is CartItem {
     (item.stockReference === undefined || (
       typeof stockReference === "object" && stockReference !== null &&
       typeof stockReference.source === "string" &&
-      (["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds"] as string[]).includes(stockReference.source) &&
-      (["piece", "boite", "barre"] as string[]).includes(String(stockReference.uniteCommande)) &&
-      (["pieces", "mm"] as string[]).includes(String(stockReference.uniteStock)) &&
+      (["tubes", "tiges_filetees", "vis", "ecrous", "inserts", "rivets", "forets", "fraises", "tarauds", "abrasifs", "soudure", "epi", "consommables"] as string[]).includes(stockReference.source) &&
+      (["piece", "boite", "barre", "unite"] as string[]).includes(String(stockReference.uniteCommande)) &&
+      (["pieces", "mm", "unites"] as string[]).includes(String(stockReference.uniteStock)) &&
       typeof stockReference.facteurConversion === "number" && Number.isFinite(stockReference.facteurConversion) && stockReference.facteurConversion > 0 &&
       (stockReference.referenceId === undefined || (typeof stockReference.referenceId === "number" && Number.isSafeInteger(stockReference.referenceId) && stockReference.referenceId > 0)) &&
       (stockReference.referenceKey === undefined || typeof stockReference.referenceKey === "string") &&

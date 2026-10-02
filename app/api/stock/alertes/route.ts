@@ -17,6 +17,10 @@ function stockUrl(reference: StockAlertReference) {
     forets: "/stock/outillage/forets",
     fraises: "/stock/outillage/fraises",
     tarauds: "/stock/outillage/tarauds",
+    abrasifs: "/stock/abrasifs",
+    soudure: "/stock/soudure",
+    epi: "/stock/epi",
+    consommables: "/stock/consommables",
   };
   return routes[reference.source];
 }
@@ -24,14 +28,17 @@ function stockUrl(reference: StockAlertReference) {
 export async function GET() {
   try {
     const snapshot = await getStockAlertsSnapshot();
-    const alertes = snapshot.alertes.map((reference) => {
+    const withStockUrl = (reference: StockAlertReference) => {
       return {
         ...reference,
         stockUrl: stockUrl(reference),
       };
-    });
+    };
+    const references = snapshot.references.map(withStockUrl);
+    const alertes = references.filter((reference) => reference.statut !== "non_defini");
 
     return NextResponse.json({
+      references,
       alertes,
       global: snapshot.global,
       indicateurs: {
@@ -39,9 +46,11 @@ export async function GET() {
         alertes: snapshot.global.nombreAlertes,
         ruptures: snapshot.alertes.filter((reference) => reference.statut === "rupture").length,
         seuilsNonDefinis: snapshot.references.filter((reference) => reference.statut === "non_defini").length,
+        referencesAInitialiser: snapshot.referencesAInitialiser,
       },
       parCategorie: Object.fromEntries(snapshot.parCategorie),
       parFamille: Object.fromEntries(snapshot.parFamille),
+      referencesCatalogueParType: snapshot.referencesCatalogueParType,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json(

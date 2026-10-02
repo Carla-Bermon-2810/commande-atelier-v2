@@ -17,14 +17,14 @@ export type LigneCommandeSuivi = {
 
 export type StockReferenceSource =
   | "tubes" | "tiges_filetees" | "vis" | "ecrous" | "inserts"
-  | "rivets" | "forets" | "fraises" | "tarauds";
+  | "rivets" | "forets" | "fraises" | "tarauds" | "abrasifs" | "soudure" | "epi" | "consommables";
 
 export type StockReferenceSnapshot = {
   source: StockReferenceSource;
   referenceId?: number;
   referenceKey?: string;
-  uniteCommande: "piece" | "boite" | "barre";
-  uniteStock: "pieces" | "mm";
+  uniteCommande: "piece" | "boite" | "barre" | "unite";
+  uniteStock: "pieces" | "mm" | "unites";
   facteurConversion: number;
   longueurParBarreMm?: number;
   /** Caractéristiques techniques conservées pour créer les futurs morceaux physiques. */
@@ -42,7 +42,7 @@ export type OperationStockReception = {
   stockType: StockReferenceSource | null;
   referenceStock: string | null;
   uniteCommande: string | null;
-  uniteStock: "pieces" | "mm" | null;
+  uniteStock: "pieces" | "mm" | "unites" | null;
   quantiteAAjouter: number | null;
   configuration: Record<string, string | number | null>;
   stockAvant: Record<string, unknown> | null;
@@ -53,7 +53,7 @@ export type OperationStockReception = {
     message?: string;
     stockActuel: number | null;
     stockApres: number | null;
-    unite: "pieces" | "mm" | null;
+    unite: "pieces" | "mm" | "unites" | null;
   };
 };
 

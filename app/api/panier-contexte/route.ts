@@ -5,17 +5,22 @@ import { getServerSupabase } from "@/lib/supabase-server";
 type LiaisonPanierRow = {
   catalogue_id: number;
   stock_reference_key: string | null;
-  unite_commande: "piece" | "boite" | "tube" | "tige";
+  unite_commande: "piece" | "boite" | "tube" | "tige" | "unite";
   facteur_conversion: number | string;
+  configuration: Record<string, unknown> | null;
 };
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("fr-FR").format(value);
 }
 
-function libelleUnite(unite: LiaisonPanierRow["unite_commande"], facteur: number) {
+function libelleUnite(unite: LiaisonPanierRow["unite_commande"], facteur: number, configuration: LiaisonPanierRow["configuration"]) {
   if (unite === "boite") return `Boîte de ${formatNumber(facteur)} pièce${facteur > 1 ? "s" : ""}`;
   if (unite === "tube" || unite === "tige") return "Longueur à confirmer à la réception";
+  if (unite === "unite") {
+    const label = configuration?.conditionnement_label ?? configuration?.conditionnementLabel ?? configuration?.unite_libelle ?? configuration?.uniteLibelle;
+    return typeof label === "string" && label.trim() ? label.trim() : "Unité";
+  }
   return "Pièce";
 }
 
@@ -38,7 +43,7 @@ export async function GET(request: Request) {
     const supabase = getServerSupabase();
     const { data, error } = await supabase
       .from("catalogue_stock_liaisons")
-      .select("catalogue_id,stock_reference_key,unite_commande,facteur_conversion")
+      .select("catalogue_id,stock_reference_key,unite_commande,facteur_conversion,configuration")
       .in("catalogue_id", ids)
       .eq("actif", true)
       .returns<LiaisonPanierRow[]>();
@@ -49,7 +54,7 @@ export async function GET(request: Request) {
       const facteur = Number(liaison.facteur_conversion);
       if (!Number.isFinite(facteur) || facteur <= 0) return [];
       return [[liaison.catalogue_id, {
-        unite: libelleUnite(liaison.unite_commande, facteur),
+        unite: libelleUnite(liaison.unite_commande, facteur, liaison.configuration),
         referenceMetier: liaison.stock_reference_key ?? null,
       }]];
     }));

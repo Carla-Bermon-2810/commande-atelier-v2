@@ -6,6 +6,7 @@ import {
   type StockQuantiteRow,
   type TigeStockRow,
   type TubeStockRow,
+  type StockArticleCatalogueRow,
 } from "@/lib/stock-alerts";
 
 function unwrap<T>(result: { data: T[] | null; error: { message: string } | null }, label: string) {
@@ -30,6 +31,7 @@ export async function getStockAlertsSnapshot() {
     foretsResult,
     fraisesResult,
     taraudsResult,
+    articlesCatalogueResult,
   ] = await Promise.all([
     supabase.from("stock_tubes").select("id,matiere,type,section,epaisseur,nuance,longueur_disponible,statut"),
     supabase.from("stock_tiges_filetees").select("id,matiere,diametre,longueur_disponible,statut"),
@@ -41,6 +43,7 @@ export async function getStockAlertsSnapshot() {
     supabase.from("stock_forets").select("id,dimension,quantite,seuil_minimum"),
     supabase.from("stock_fraises").select("id,dimension,designation,quantite,seuil_minimum"),
     supabase.from("stock_tarauds").select("id,reference,dimension,quantite,seuil_minimum"),
+    supabase.from("stock_articles_catalogue").select("id,stock_type,famille_catalogue_snapshot,designation_snapshot,quantite_disponible,seuil_minimum,etat_initialisation,unite_libelle,conditionnement_label").eq("actif", true),
   ]);
 
   const input: StockAlertSnapshotInput = {
@@ -54,6 +57,7 @@ export async function getStockAlertsSnapshot() {
     forets: unwrap(foretsResult, "les forets") as StockQuantiteRow[],
     fraises: unwrap(fraisesResult, "les fraises") as StockQuantiteRow[],
     tarauds: unwrap(taraudsResult, "les tarauds") as StockQuantiteRow[],
+    articlesCatalogue: unwrap(articlesCatalogueResult, "les références Catalogue suivies") as StockArticleCatalogueRow[],
   };
 
   return createStockAlertsSnapshot(input);

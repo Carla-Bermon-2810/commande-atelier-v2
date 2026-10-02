@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ClipboardList,
-  FolderOpen,
   Search,
   Settings,
   Package,
@@ -34,13 +33,11 @@ export default function Header() {
   }, [pathname]);
 
   const navItems = [
-    { href: "/", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
     { href: "/commandes", label: "Commandes", icon: ClipboardList },
   ];
 
   const sidebarItems = [
-    { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
     { href: "/stock", label: "Stock", icon: Package },
     { href: "/commandes", label: "Commandes", icon: ClipboardList },
   ];
@@ -53,13 +50,13 @@ export default function Header() {
   const submitGlobalSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = globalSearch.trim();
-    window.location.assign(query ? `/?q=${encodeURIComponent(query)}` : "/");
+    window.location.assign(query ? `/stock/alertes?recherche=${encodeURIComponent(query)}` : "/stock");
   };
 
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-[11.25rem] flex-col border-r border-white/10 bg-[#172025] text-white lg:flex">
-        <Link href="/" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-3">
+        <Link href="/stock" className="flex min-h-[5rem] items-center justify-center border-b border-white/10 px-3">
           <Image src="/decoupe-laser-logo-officiel-orange-intense.png" alt="Découpe Laser" width={168} height={65} className="h-auto w-full object-contain" priority />
         </Link>
 
@@ -116,23 +113,23 @@ export default function Header() {
           <div className="text-slate-400">
             <ShieldCheck size={21} aria-hidden="true" />
             <p className="mt-3 text-xs font-semibold text-slate-200">Découpe Laser</p>
-            <p className="mt-1 text-[11px] leading-5">Catalogue interne<br />V2.0</p>
+            <p className="mt-1 text-[11px] leading-5">Stock Atelier<br />V2.0</p>
           </div>
         </div>
       </aside>
 
       <header className="sticky top-0 z-40 mx-auto mb-4 max-w-[1600px] px-0 sm:mb-6 lg:mb-0 lg:max-w-none">
       <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#172025] px-4 py-3 shadow-sm sm:px-6 lg:h-[5rem] lg:gap-7 lg:border-slate-200 lg:bg-white/95 lg:px-9 lg:py-0">
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
+        <Link href="/stock" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 lg:flex-none">
           <span className="flex h-10 w-[105px] shrink-0 items-center justify-center lg:hidden">
             <Image src="/decoupe-laser-logo-officiel-orange-intense.png" alt="Découpe Laser" width={105} height={41} className="h-auto w-full object-contain" priority />
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-white sm:text-2xl lg:text-[#121820]">
-              Commande Atelier
+              Stock Atelier
             </h1>
             <p className="hidden text-sm text-slate-300 sm:block lg:text-[#626B72]">
-              Catalogue interne
+              Gestion de l’inventaire
             </p>
           </div>
         </Link>
@@ -143,9 +140,9 @@ export default function Header() {
             type="search"
             value={globalSearch}
             onChange={(event) => setGlobalSearch(event.target.value)}
-            placeholder="Rechercher un produit, une famille, une référence..."
+            placeholder="Rechercher une référence, un produit, une matière..."
             className="min-w-0 flex-1 bg-transparent text-sm text-[#2F3437] outline-none placeholder:text-slate-400"
-            aria-label="Rechercher dans le catalogue"
+            aria-label="Rechercher dans le stock"
           />
           <kbd className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-400">Ctrl + K</kbd>
         </form>
@@ -177,13 +174,12 @@ export default function Header() {
       </div>
       <form onSubmit={submitGlobalSearch} className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
         <Search size={18} className="shrink-0 text-[#142026]" aria-hidden="true" />
-        <input type="search" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Rechercher un produit ou une référence..." aria-label="Rechercher dans le catalogue" className="min-h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+        <input type="search" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Rechercher un produit ou une référence..." aria-label="Rechercher dans le stock" className="min-h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
         <button type="submit" className="rounded-md bg-[#F95516] px-3 py-2 text-xs font-semibold text-white">Chercher</button>
       </form>
       </header>
-      <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
+      <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,.08)] backdrop-blur lg:hidden">
         {[
-          { href: "/#catalogue", label: "Catalogue", icon: FolderOpen },
           { href: "/stock", label: "Stock", icon: Package },
           { href: "/commandes", label: "Commandes", icon: ClipboardList },
           { href: "/panier", label: "Panier", icon: ShoppingCart },

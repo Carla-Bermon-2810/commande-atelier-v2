@@ -1,6 +1,6 @@
 export type StockAlertStatus = "ok" | "a_recommander" | "rupture";
 export type StockAlertDisplayStatus = StockAlertStatus | "non_defini";
-export type StockAlertUnit = "mm" | "pieces";
+export type StockAlertUnit = "mm" | "pieces" | "unites";
 export type StockAlertSource =
   | "tubes"
   | "tiges_filetees"
@@ -10,12 +10,16 @@ export type StockAlertSource =
   | "rivets"
   | "forets"
   | "fraises"
-  | "tarauds";
+  | "tarauds"
+  | "abrasifs"
+  | "soudure"
+  | "epi"
+  | "consommables";
 
 export type StockAlertReference = {
   id: string;
   source: StockAlertSource;
-  categorie: "Tubes" | "Tiges filetées" | "Fixations" | "Outillage";
+  categorie: "Tubes" | "Tiges filetées" | "Fixations" | "Outillage" | "Abrasifs" | "Soudure" | "EPI" | "Consommables";
   famille: string;
   referenceKey: string;
   libelle: string;
@@ -74,6 +78,18 @@ export type StockQuantiteRow = {
   seuil_minimum: number | string | null;
 };
 
+export type StockArticleCatalogueRow = {
+  id: number | string;
+  stock_type: "abrasifs" | "soudure" | "epi" | "consommables";
+  famille_catalogue_snapshot: string;
+  designation_snapshot: string;
+  quantite_disponible: number | string | null;
+  seuil_minimum: number | string | null;
+  etat_initialisation: "a_initialiser" | "initialise";
+  unite_libelle: string | null;
+  conditionnement_label: string | null;
+};
+
 export type StockAlertSnapshotInput = {
   tubes: TubeStockRow[];
   tigesFiletees: TigeStockRow[];
@@ -89,6 +105,8 @@ export type StockAlertSnapshotInput = {
   forets: StockQuantiteRow[];
   fraises: StockQuantiteRow[];
   tarauds: StockQuantiteRow[];
+  /** Optionnel pour conserver la compatibilité des appels historiques et des tests. */
+  articlesCatalogue?: StockArticleCatalogueRow[];
 };
 
 const severity: Record<StockAlertDisplayStatus, number> = {
@@ -223,7 +241,12 @@ function buildBoxAlerts(args: {
   famille: string;
 }) {
   return args.rows.map((row) => {
-    const stockActuel = numberOrZero(row.boites_pleines) * numberOrZero(row.pieces_par_boite) + numberOrZero(row.pieces_restantes);
+    const stockEnBoites = numberOrZero(row.boites_pleines) * numberOrZero(row.pieces_par_boite);
+    // Les vis ne sont plus suivies au détail : les reliquats historiques ne
+    // participent donc pas à leur niveau d'alerte.
+    const stockActuel = args.source === "vis"
+      ? stockEnBoites
+      : stockEnBoites + numberOrZero(row.pieces_restantes);
     const seuil = numberOrZero(row.seuil_boites) * numberOrZero(row.pieces_par_boite);
     const referenceKey = text(row.reference) || String(row.id);
     const libelle = [text(row.designation), text(row.reference), text(row.dimension)].filter(Boolean).join(" · ");
@@ -271,7 +294,34 @@ function buildQuantityAlerts(args: {
   });
 }
 
+function buildCatalogueArticleAlerts(rows: StockArticleCatalogueRow[]) {
+  return rows
+    // Une référence non initialisée ne représente ni un stock à zéro, ni une
+    // alerte. Elle est volontairement exclue du moteur jusqu'à la saisie
+    // explicite de son unité, sa quantité et son seuil.
+    .filter((row) => row.etat_initialisation === "initialise")
+    .map((row) => {
+      const source = row.stock_type;
+      const categorie: StockAlertReference["categorie"] = ({ abrasifs: "Abrasifs", soudure: "Soudure", epi: "EPI", consommables: "Consommables" } as const)[source];
+      const stockActuel = numberOrZero(row.quantite_disponible);
+      const seuil = row.seuil_minimum === null ? null : numberOrZero(row.seuil_minimum);
+      return {
+        id: `${source}:${row.id}`,
+        source,
+        categorie,
+        famille: text(row.famille_catalogue_snapshot) || categorie,
+        referenceKey: String(row.id),
+        libelle: text(row.designation_snapshot) || categorie,
+        stockActuel,
+        seuil,
+        unite: "unites",
+        statut: calculateStockAlertStatus(stockActuel, seuil),
+      } satisfies StockAlertReference;
+    });
+}
+
 export function createStockAlertsSnapshot(input: StockAlertSnapshotInput) {
+  const articlesCatalogue = input.articlesCatalogue ?? [];
   const thresholds = new Map(
     input.seuilsLongueur.map((threshold) => [
       `${threshold.source}:${threshold.reference_key}`,
@@ -305,6 +355,7 @@ export function createStockAlertsSnapshot(input: StockAlertSnapshotInput) {
     ...buildQuantityAlerts({ rows: input.forets, source: "forets", categorie: "Outillage", famille: "Forets" }),
     ...buildQuantityAlerts({ rows: input.fraises, source: "fraises", categorie: "Outillage", famille: "Fraises" }),
     ...buildQuantityAlerts({ rows: input.tarauds, source: "tarauds", categorie: "Outillage", famille: "Tarauds" }),
+    ...buildCatalogueArticleAlerts(articlesCatalogue),
   ];
 
   const alertes = references
@@ -317,5 +368,12 @@ export function createStockAlertsSnapshot(input: StockAlertSnapshotInput) {
     parFamille: groupStockAlertsBy(references, (reference) => `${reference.categorie}:${reference.famille}`),
     parCategorie: groupStockAlertsBy(references, (reference) => reference.categorie),
     global: getStockAlertGroup(references),
+    referencesAInitialiser: articlesCatalogue.filter((article) => article.etat_initialisation === "a_initialiser").length,
+    referencesCatalogueParType: Object.fromEntries(
+      ["abrasifs", "soudure", "epi", "consommables"].map((type) => [
+        type,
+        articlesCatalogue.filter((article) => article.stock_type === type).length,
+      ]),
+    ) as Record<StockArticleCatalogueRow["stock_type"], number>,
   };
 }
